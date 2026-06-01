@@ -1250,3 +1250,37 @@ pub fn get_meeting_notes() -> Result<Vec<super::recording_saver::MeetingNote>, S
         None => Err("No active recording session".to_string()),
     }
 }
+
+// ============================================================================
+// MEETING DETECTION COMMANDS (#387)
+// ============================================================================
+
+use once_cell::sync::Lazy;
+
+static MEETING_DETECTION_ENABLED: Lazy<Arc<AtomicBool>> = Lazy::new(|| Arc::new(AtomicBool::new(false)));
+static MEETING_DETECTION_EVENTS: Lazy<std::sync::Mutex<Vec<super::meeting_detector::MeetingDetectionEvent>>> =
+    Lazy::new(|| std::sync::Mutex::new(Vec::new()));
+
+/// Enable/disable automatic meeting detection
+#[tauri::command]
+pub fn set_meeting_detection_enabled(enabled: bool) -> Result<(), String> {
+    MEETING_DETECTION_ENABLED.store(enabled, Ordering::SeqCst);
+    info!("🔍 Meeting auto-detection: {}", if enabled { "enabled" } else { "disabled" });
+    Ok(())
+}
+
+/// Check if meeting detection is currently enabled
+#[tauri::command]
+pub fn is_meeting_detection_enabled() -> bool {
+    MEETING_DETECTION_ENABLED.load(Ordering::SeqCst)
+}
+
+/// Poll for meeting detection events (frontend polls this)
+#[tauri::command]
+pub fn poll_meeting_detection_events() -> Vec<super::meeting_detector::MeetingDetectionEvent> {
+    if let Ok(mut events) = MEETING_DETECTION_EVENTS.lock() {
+        events.drain(..).collect()
+    } else {
+        Vec::new()
+    }
+}

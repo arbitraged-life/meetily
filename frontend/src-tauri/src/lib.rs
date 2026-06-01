@@ -803,6 +803,9 @@ pub fn run() {
             audio::recording_commands::get_recording_meeting_name,
             audio::recording_commands::add_meeting_note,
             audio::recording_commands::get_meeting_notes,
+            audio::recording_commands::set_meeting_detection_enabled,
+            audio::recording_commands::is_meeting_detection_enabled,
+            audio::recording_commands::poll_meeting_detection_events,
             // Device monitoring commands (AirPods/Bluetooth disconnect/reconnect)
             audio::recording_commands::poll_audio_device_events,
             audio::recording_commands::get_reconnection_status,
