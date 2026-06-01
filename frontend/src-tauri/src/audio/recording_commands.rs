@@ -116,6 +116,7 @@ pub async fn start_recording_with_meeting_name<R: Runtime>(
             Ok(prefs) => {
                 info!("📋 Loaded recording preferences: auto_save={}, preferred_mic={:?}, preferred_system={:?}",
                       prefs.auto_save, prefs.preferred_mic_device, prefs.preferred_system_device);
+                manager.set_save_folder(prefs.save_folder.clone());
                 (prefs.auto_save, prefs.preferred_mic_device, prefs.preferred_system_device)
             }
             Err(e) => {
@@ -377,6 +378,7 @@ pub async fn start_recording_with_devices_and_meeting<R: Runtime>(
     let auto_save = match super::recording_preferences::load_recording_preferences(&app).await {
         Ok(prefs) => {
             info!("📋 Loaded recording preferences: auto_save={}", prefs.auto_save);
+            manager.set_save_folder(prefs.save_folder.clone());
             prefs.auto_save
         }
         Err(e) => {

@@ -51,6 +51,7 @@ pub struct RecordingSaver {
     incremental_saver: Option<Arc<AsyncMutex<IncrementalAudioSaver>>>,
     meeting_folder: Option<PathBuf>,
     meeting_name: Option<String>,
+    save_folder: Option<PathBuf>,
     metadata: Option<MeetingMetadata>,
     transcript_segments: Arc<Mutex<Vec<TranscriptSegment>>>,
     chunk_receiver: Option<mpsc::UnboundedReceiver<AudioChunk>>,
@@ -63,11 +64,17 @@ impl RecordingSaver {
             incremental_saver: None,
             meeting_folder: None,
             meeting_name: None,
+            save_folder: None,
             metadata: None,
             transcript_segments: Arc::new(Mutex::new(Vec::new())),
             chunk_receiver: None,
             is_saving: Arc::new(Mutex::new(false)),
         }
+    }
+
+    /// Set the save folder from user preferences
+    pub fn set_save_folder(&mut self, folder: PathBuf) {
+        self.save_folder = Some(folder);
     }
 
     /// Set the meeting name for this recording session
@@ -228,8 +235,9 @@ impl RecordingSaver {
     /// * `meeting_name` - Name of the meeting
     /// * `create_checkpoints` - Whether to create .checkpoints/ directory and IncrementalAudioSaver
     fn initialize_meeting_folder(&mut self, meeting_name: &str, create_checkpoints: bool) -> Result<()> {
-        // Load preferences to get base recordings folder
-        let base_folder = super::recording_preferences::get_default_recordings_folder();
+        // Use user-configured save folder, falling back to default
+        let base_folder = self.save_folder.clone()
+            .unwrap_or_else(|| super::recording_preferences::get_default_recordings_folder());
 
         // Ensure base recordings directory exists (critical for first-run scenarios)
         // On first installation, this directory won't exist yet and must be created

@@ -191,6 +191,21 @@ export function RecordingSettings({ onSave }: RecordingSettingsProps) {
               <FolderOpen className="w-4 h-4" />
               Open Folder
             </button>
+            <button
+              onClick={async () => {
+                try {
+                  const newPath = await invoke<string>('select_recording_folder');
+                  if (newPath) {
+                    setPreferences(prev => ({ ...prev, save_folder: newPath }));
+                  }
+                } catch (error) {
+                  console.error('Failed to select folder:', error);
+                }
+              }}
+              className="flex items-center gap-2 px-3 py-2 text-sm border border-gray-300 dark:border-gray-700 rounded-md hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors ml-2"
+            >
+              Change
+            </button>
           </div>
 
           <div className="p-4 border border-blue-200 dark:border-blue-900/50 rounded-lg bg-blue-50 dark:bg-blue-900/20">
