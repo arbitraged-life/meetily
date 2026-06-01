@@ -124,9 +124,9 @@ pub async fn export_meeting_markdown<R: Runtime>(
     // Speaker info if diarization state is available
     if let Some(diar_state) = app.try_state::<Arc<tokio::sync::RwLock<crate::diarization::DiarizationState>>>() {
         let ds = diar_state.read().await;
-        if !ds.meeting_speakers.is_empty() {
+        if !ds.speakers.is_empty() {
             md.push_str("speakers:\n");
-            for speaker in &ds.meeting_speakers {
+            for speaker in &ds.speakers {
                 md.push_str(&format!("  - id: \"{}\"\n    name: \"{}\"\n", speaker.id, speaker.label));
             }
         }

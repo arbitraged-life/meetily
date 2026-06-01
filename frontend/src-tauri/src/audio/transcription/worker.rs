@@ -146,6 +146,9 @@ pub fn start_transcription_task<R: Runtime>(
                             let chunk_timestamp = chunk.timestamp;
                             let chunk_duration = chunk.data.len() as f64 / chunk.sample_rate as f64;
 
+                            // Keep a copy of audio samples for speaker diarization
+                            let diarization_samples = chunk.data.clone();
+
                             // Transcribe with provider-agnostic approach
                             match transcribe_chunk_with_provider(
                                 &engine_clone,
@@ -208,6 +211,31 @@ pub fn start_transcription_task<R: Runtime>(
 
                                         // Emit transcript update with NEW recording-relative timestamps
 
+                                        // Speaker diarization — extract embedding and assign speaker
+                                        let (speaker_id, speaker_label) = {
+                                            if let Some(diar_state) = app_clone.try_state::<Arc<tokio::sync::RwLock<crate::diarization::DiarizationState>>>() {
+                                                let mut state = diar_state.write().await;
+                                                if let Some(ref embedder) = state.embedder {
+                                                    match embedder.extract_embedding(&diarization_samples).await {
+                                                        Ok(embedding) => {
+                                                            let threshold = state.config.similarity_threshold;
+                                                            let (sid, slabel) = crate::diarization::clustering::assign_speaker(
+                                                                &embedding,
+                                                                &mut state.speakers,
+                                                                threshold,
+                                                            );
+                                                            (Some(sid), Some(slabel))
+                                                        }
+                                                        Err(_) => (None, None),
+                                                    }
+                                                } else {
+                                                    (None, None)
+                                                }
+                                            } else {
+                                                (None, None)
+                                            }
+                                        };
+
                                         // Apply dictionary corrections to transcript text
                                         let corrected_text = {
                                             if let Some(dict_state) = app_clone.try_state::<crate::dictionary::DictionaryState>() {
@@ -235,8 +263,8 @@ pub fn start_transcription_task<R: Runtime>(
                                             audio_end_time,
                                             duration: chunk_duration,
                                             // Speaker diarization — populated asynchronously if model loaded
-                                            speaker_id: None,
-                                            speaker_label: None,
+                                            speaker_id: speaker_id.clone(),
+                                            speaker_label: speaker_label.clone(),
                                         };
 
                                         if let Err(e) = app_clone.emit("transcript-update", &update)

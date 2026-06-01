@@ -64,20 +64,23 @@ impl Default for DiarizationConfig {
 pub struct DiarizationState {
     pub config: DiarizationConfig,
     /// Known speakers from this meeting
-    pub meeting_speakers: Vec<Speaker>,
+    pub speakers: Vec<Speaker>,
     /// Persistent speaker database (cross-meeting)
     pub known_speakers: Vec<Speaker>,
     /// Segments awaiting attribution
     pub pending_segments: Vec<DiarizedSegment>,
+    /// Embedding extractor (None if model not available)
+    pub embedder: Option<embeddings::EmbeddingExtractor>,
 }
 
 impl DiarizationState {
     pub fn new(config: DiarizationConfig) -> Self {
         Self {
             config,
-            meeting_speakers: Vec::new(),
+            speakers: Vec::new(),
             known_speakers: Vec::new(),
             pending_segments: Vec::new(),
+            embedder: None,
         }
     }
 }

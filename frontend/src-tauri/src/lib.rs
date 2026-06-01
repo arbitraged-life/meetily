@@ -105,12 +105,26 @@ async fn start_recording<R: Runtime>(
         return Err("Recording already in progress".to_string());
     }
 
+    // Auto-name from calendar if no meeting name provided
+    let effective_meeting_name = if meeting_name.is_some() {
+        meeting_name.clone()
+    } else {
+        // Try to get active calendar event
+        if let Some(cal_state) = app.try_state::<calendar::CalendarState>() {
+            if let Some(cal_config) = app.try_state::<Arc<tokio::sync::RwLock<calendar::CalendarConfig>>>() {
+                let config = cal_config.read().await;
+                let events = calendar::scheduler::get_active_events(&cal_state, &config).await;
+                events.first().map(|e| e.summary.clone())
+            } else { None }
+        } else { None }
+    };
+
     // Call the actual audio recording system with meeting name
     match audio::recording_commands::start_recording_with_devices_and_meeting(
         app.clone(),
         mic_device_name,
         system_device_name,
-        meeting_name.clone(),
+        effective_meeting_name.clone(),
     )
     .await
     {
@@ -437,6 +451,7 @@ pub fn run() {
         .manage(Arc::new(RwLock::new(screen_context::ScreenContextState::default())))
         .manage(Arc::new(tokio::sync::Mutex::new(None::<tokio::sync::watch::Sender<bool>>)))
         .manage(dictionary::new_dictionary_state())
+        .manage(Arc::new(tokio::sync::RwLock::new(diarization::DiarizationState::new(diarization::DiarizationConfig::default()))))
         .setup(|_app| {
             log::info!("Application setup complete");
 
@@ -788,7 +803,7 @@ pub fn run() {
             dictionary::commands::update_dictionary_entry,
             dictionary::commands::import_voiceink_dictionary,
             // Speaker diarization
-            diarization::commands::get_meeting_speakers,
+            diarization::commands::get_speakers,
             diarization::commands::get_known_speakers,
             diarization::commands::rename_speaker,
             diarization::commands::merge_speakers,

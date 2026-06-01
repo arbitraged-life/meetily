@@ -9,12 +9,12 @@ use tokio::sync::RwLock;
 
 /// Tauri command: get current speakers for this meeting
 #[tauri::command]
-pub async fn get_meeting_speakers<R: Runtime>(
+pub async fn get_speakers<R: Runtime>(
     app: AppHandle<R>,
 ) -> Result<Vec<Speaker>, String> {
     let state = app.state::<Arc<RwLock<DiarizationState>>>();
     let s = state.read().await;
-    Ok(s.meeting_speakers.clone())
+    Ok(s.speakers.clone())
 }
 
 /// Tauri command: get all known speakers (persistent database)
@@ -36,7 +36,7 @@ pub async fn rename_speaker<R: Runtime>(
     let mut s = state.write().await;
 
     // Rename in current meeting
-    let renamed = if let Some(speaker) = s.meeting_speakers.iter_mut().find(|sp| sp.id == speaker_id) {
+    let renamed = if let Some(speaker) = s.speakers.iter_mut().find(|sp| sp.id == speaker_id) {
         speaker.label = new_name.clone();
         true
     } else {
@@ -60,7 +60,7 @@ pub async fn merge_speakers<R: Runtime>(
 ) -> Result<bool, String> {
     let state = app.state::<Arc<RwLock<DiarizationState>>>();
     let mut s = state.write().await;
-    let result = clustering::merge_speakers(&mut s.meeting_speakers, &keep_id, &merge_id);
+    let result = clustering::merge_speakers(&mut s.speakers, &keep_id, &merge_id);
     Ok(result)
 }
 
