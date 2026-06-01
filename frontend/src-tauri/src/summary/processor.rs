@@ -244,6 +244,8 @@ pub async fn generate_meeting_summary(
     summary_chunk_prompt: Option<&str>,
     summary_combine_system_prompt: Option<&str>,
     summary_combine_prompt: Option<&str>,
+    // Output language override (None = English/default)
+    summary_language: Option<&str>,
 ) -> Result<(String, i64), String> {
     // Check cancellation at the start
     if let Some(token) = cancellation_token {
@@ -391,6 +393,13 @@ pub async fn generate_meeting_summary(
         &section_instructions,
         &clean_template_markdown,
     );
+
+    // Prepend language instruction if specified
+    let final_system_prompt = if let Some(lang) = summary_language {
+        format!("IMPORTANT: Write the entire summary in {}.\n\n{}", lang, final_system_prompt)
+    } else {
+        final_system_prompt
+    };
 
     let mut final_user_prompt = format!(
         r#"

@@ -275,6 +275,7 @@ impl SummaryService {
             None, // summary_chunk_prompt
             None, // summary_combine_system_prompt
             None, // summary_combine_prompt
+            None, // summary_language
         )
         .await;
 

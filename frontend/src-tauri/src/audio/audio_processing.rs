@@ -37,10 +37,13 @@ pub fn create_meeting_folder(
     meeting_name: &str,
     create_checkpoints_dir: bool,
 ) -> Result<PathBuf> {
-    let timestamp = Utc::now().format("%Y-%m-%d_%H-%M").to_string();
+    let now = Utc::now();
+    let timestamp = now.format("%Y-%m-%d_%H-%M").to_string();
+    let month_folder = now.format("%Y-%m").to_string();
     let sanitized_name = sanitize_filename(meeting_name);
     let folder_name = format!("{}_{}", sanitized_name, timestamp);
-    let meeting_folder = base_path.join(folder_name);
+    // Organize recordings by month: base_path/2025-06/meeting_2025-06-01_14-30/
+    let meeting_folder = base_path.join(&month_folder).join(folder_name);
 
     // Create main meeting folder
     std::fs::create_dir_all(&meeting_folder)?;
