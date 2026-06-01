@@ -270,6 +270,11 @@ impl SummaryService {
             custom_openai_top_p,
             app_data_dir.as_ref(),
             Some(&cancellation_token),
+            None, // summary_system_prompt
+            None, // summary_chunk_system_prompt
+            None, // summary_chunk_prompt
+            None, // summary_combine_system_prompt
+            None, // summary_combine_prompt
         )
         .await;
 

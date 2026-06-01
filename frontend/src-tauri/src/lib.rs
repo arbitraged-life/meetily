@@ -848,6 +848,11 @@ pub fn run() {
             // Custom OpenAI commands
             api::api_save_custom_openai_config,
             api::api_get_custom_openai_config,
+            api::api_get_default_summary_system_prompt,
+            api::api_get_default_summary_chunk_system_prompt,
+            api::api_get_default_summary_chunk_prompt,
+            api::api_get_default_summary_combine_system_prompt,
+            api::api_get_default_summary_combine_prompt,
             api::api_test_custom_openai_connection,
             // Summary commands
             summary::commands::api_process_transcript,

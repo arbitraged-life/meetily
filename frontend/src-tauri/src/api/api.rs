@@ -1381,3 +1381,29 @@ pub async fn api_test_custom_openai_connection<R: Runtime>(
         }
     }
 }
+
+// Summary prompt customization - getter commands for defaults
+#[tauri::command]
+pub fn api_get_default_summary_system_prompt() -> String {
+    crate::summary::processor::DEFAULT_SUMMARY_SYSTEM_PROMPT.to_string()
+}
+
+#[tauri::command]
+pub fn api_get_default_summary_chunk_system_prompt() -> String {
+    crate::summary::processor::DEFAULT_SUMMARY_CHUNK_SYSTEM_PROMPT.to_string()
+}
+
+#[tauri::command]
+pub fn api_get_default_summary_chunk_prompt() -> String {
+    crate::summary::processor::DEFAULT_SUMMARY_CHUNK_PROMPT.to_string()
+}
+
+#[tauri::command]
+pub fn api_get_default_summary_combine_system_prompt() -> String {
+    crate::summary::processor::DEFAULT_SUMMARY_COMBINE_SYSTEM_PROMPT.to_string()
+}
+
+#[tauri::command]
+pub fn api_get_default_summary_combine_prompt() -> String {
+    crate::summary::processor::DEFAULT_SUMMARY_COMBINE_PROMPT.to_string()
+}
