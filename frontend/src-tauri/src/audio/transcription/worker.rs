@@ -36,6 +36,9 @@ pub struct TranscriptUpdate {
     pub audio_start_time: f64, // Seconds from recording start (e.g., 125.3)
     pub audio_end_time: f64,   // Seconds from recording start (e.g., 128.6)
     pub duration: f64,          // Segment duration in seconds (e.g., 3.3)
+    // Speaker diarization fields
+    pub speaker_id: Option<String>,    // Unique speaker identifier
+    pub speaker_label: Option<String>, // Human-readable label (e.g., "Speaker 1", "John")
 }
 
 // NOTE: get_transcript_history and get_recording_meeting_name functions
@@ -217,6 +220,9 @@ pub fn start_transcription_task<R: Runtime>(
                                             audio_start_time,
                                             audio_end_time,
                                             duration: chunk_duration,
+                                            // Speaker diarization — populated asynchronously if model loaded
+                                            speaker_id: None,
+                                            speaker_label: None,
                                         };
 
                                         if let Err(e) = app_clone.emit("transcript-update", &update)

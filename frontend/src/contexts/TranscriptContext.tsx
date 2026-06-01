@@ -315,6 +315,9 @@ export function TranscriptProvider({ children }: { children: ReactNode }) {
             audio_start_time: update.audio_start_time,
             audio_end_time: update.audio_end_time,
             duration: update.duration,
+            // Speaker diarization
+            speaker_id: update.speaker_id,
+            speaker_label: update.speaker_label,
           };
 
           // Add to buffer
@@ -424,6 +427,8 @@ export function TranscriptProvider({ children }: { children: ReactNode }) {
       audio_start_time: update.audio_start_time,
       audio_end_time: update.audio_end_time,
       duration: update.duration,
+      speaker_id: update.speaker_id,
+      speaker_label: update.speaker_label,
     };
 
     setTranscripts(prev => {

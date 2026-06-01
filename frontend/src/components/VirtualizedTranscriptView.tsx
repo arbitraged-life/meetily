@@ -64,6 +64,20 @@ function cleanStopWords(text: string): string {
 }
 
 // Memoized transcript segment component
+const SPEAKER_COLORS = [
+    'text-blue-600', 'text-emerald-600', 'text-purple-600', 'text-orange-600',
+    'text-pink-600', 'text-cyan-600', 'text-amber-600', 'text-indigo-600',
+];
+
+function getSpeakerColor(speakerId: string): string {
+    let hash = 0;
+    for (let i = 0; i < speakerId.length; i++) {
+        hash = ((hash << 5) - hash) + speakerId.charCodeAt(i);
+        hash |= 0;
+    }
+    return SPEAKER_COLORS[Math.abs(hash) % SPEAKER_COLORS.length];
+}
+
 const TranscriptSegment = memo(function TranscriptSegment({
     id,
     timestamp,
@@ -71,6 +85,8 @@ const TranscriptSegment = memo(function TranscriptSegment({
     confidence,
     isStreaming,
     showConfidence,
+    speaker_id,
+    speaker_label,
 }: {
     id: string;
     timestamp: number;
@@ -78,8 +94,11 @@ const TranscriptSegment = memo(function TranscriptSegment({
     confidence?: number;
     isStreaming: boolean;
     showConfidence: boolean;
+    speaker_id?: string;
+    speaker_label?: string;
 }) {
     const displayText = cleanStopWords(text) || (text.trim() === '' ? '[Silence]' : text);
+    const speakerColor = speaker_id ? getSpeakerColor(speaker_id) : '';
 
     return (
         <div id={`segment-${id}`} className="mb-3">
@@ -97,6 +116,11 @@ const TranscriptSegment = memo(function TranscriptSegment({
                     </TooltipContent>
                 </Tooltip>
                 <div className="flex-1">
+                    {speaker_label && (
+                        <span className={`text-xs font-semibold ${speakerColor} mr-2`}>
+                            {speaker_label}
+                        </span>
+                    )}
                     {isStreaming ? (
                         <div className="bg-gray-100 border border-gray-200 rounded-lg px-3 py-2">
                             <p className="text-base text-gray-800 leading-relaxed">{displayText}</p>
@@ -296,6 +320,8 @@ export const VirtualizedTranscriptView: React.FC<VirtualizedTranscriptViewProps>
                                         confidence={segment.confidence}
                                         isStreaming={isStreaming}
                                         showConfidence={showConfidence}
+                                        speaker_id={segment.speaker_id}
+                                        speaker_label={segment.speaker_label}
                                     />
                                 </div>
                             );
@@ -352,6 +378,8 @@ export const VirtualizedTranscriptView: React.FC<VirtualizedTranscriptViewProps>
                                         confidence={segment.confidence}
                                         isStreaming={isStreaming}
                                         showConfidence={showConfidence}
+                                        speaker_id={segment.speaker_id}
+                                        speaker_label={segment.speaker_label}
                                     />
                                 </motion.div>
                             );
