@@ -436,8 +436,25 @@ pub fn run() {
         .manage(summary::summary_engine::ModelManagerState(Arc::new(tokio::sync::Mutex::new(None))))
         .manage(Arc::new(RwLock::new(screen_context::ScreenContextState::default())))
         .manage(Arc::new(tokio::sync::Mutex::new(None::<tokio::sync::watch::Sender<bool>>)))
+        .manage(dictionary::new_dictionary_state())
         .setup(|_app| {
             log::info!("Application setup complete");
+
+            // Load dictionary and start file watcher
+            let dict_state = _app.state::<dictionary::DictionaryState>().inner().clone();
+            tauri::async_runtime::spawn(async move {
+                if let Err(e) = dictionary::load_dictionary(&dict_state).await {
+                    log::error!("Failed to load dictionary: {}", e);
+                }
+            });
+            // Keep watcher alive for app lifetime by leaking it
+            match dictionary::start_dictionary_watcher(_app.state::<dictionary::DictionaryState>().inner().clone()) {
+                Ok(watcher) => {
+                    std::mem::forget(watcher);
+                    log::info!("📖 Dictionary file watcher active");
+                }
+                Err(e) => log::error!("Failed to start dictionary watcher: {}", e),
+            }
 
             // Initialize system tray
             if let Err(e) = tray::create_tray(_app.handle()) {

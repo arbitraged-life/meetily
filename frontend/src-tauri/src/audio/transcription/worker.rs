@@ -9,7 +9,7 @@ use log::{error, info, warn};
 use serde::{Deserialize, Serialize};
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::Arc;
-use tauri::{AppHandle, Emitter, Runtime};
+use tauri::{AppHandle, Emitter, Manager, Runtime};
 
 // Sequence counter for transcript updates
 static SEQUENCE_COUNTER: AtomicU64 = AtomicU64::new(0);
@@ -208,8 +208,22 @@ pub fn start_transcription_task<R: Runtime>(
 
                                         // Emit transcript update with NEW recording-relative timestamps
 
+                                        // Apply dictionary corrections to transcript text
+                                        let corrected_text = {
+                                            if let Some(dict_state) = app_clone.try_state::<crate::dictionary::DictionaryState>() {
+                                                let entries = dict_state.read().await;
+                                                if !entries.is_empty() {
+                                                    crate::dictionary::apply_dictionary(&transcript, &entries)
+                                                } else {
+                                                    transcript.clone()
+                                                }
+                                            } else {
+                                                transcript.clone()
+                                            }
+                                        };
+
                                         let update = TranscriptUpdate {
-                                            text: transcript,
+                                            text: corrected_text,
                                             timestamp: format_current_timestamp(), // Wall-clock for reference
                                             source: "Audio".to_string(),
                                             sequence_id,
