@@ -38,9 +38,24 @@ export function useTemplates() {
     Analytics.trackFeatureUsed('template_selected');
   }, []);
 
+  // Refresh templates list
+  const refreshTemplates = useCallback(async () => {
+    try {
+      const templates = await invokeTauri('api_list_templates') as Array<{
+        id: string;
+        name: string;
+        description: string;
+      }>;
+      setAvailableTemplates(templates);
+    } catch (error) {
+      console.error('Failed to refresh templates:', error);
+    }
+  }, []);
+
   return {
     availableTemplates,
     selectedTemplate,
     handleTemplateSelection,
+    refreshTemplates,
   };
 }

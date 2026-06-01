@@ -16,7 +16,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Sparkles, Settings, Loader2, FileText, Check, Square } from 'lucide-react';
+import { Sparkles, Settings, Loader2, FileText, Check, Square, Pencil } from 'lucide-react';
+import { TemplateEditorDialog } from '@/components/TemplateEditorDialog';
 import Analytics from '@/lib/analytics';
 import { invoke } from '@tauri-apps/api/core';
 import { toast } from 'sonner';
@@ -35,6 +36,7 @@ interface SummaryGeneratorButtonGroupProps {
   availableTemplates: Array<{ id: string, name: string, description: string }>;
   selectedTemplate: string;
   onTemplateSelect: (templateId: string, templateName: string) => void;
+  onTemplatesChanged?: () => void;
   hasTranscripts?: boolean;
   isModelConfigLoading?: boolean;
   onOpenModelSettings?: (openFn: () => void) => void;
@@ -51,12 +53,14 @@ export function SummaryGeneratorButtonGroup({
   availableTemplates,
   selectedTemplate,
   onTemplateSelect,
+  onTemplatesChanged,
   hasTranscripts = true,
   isModelConfigLoading = false,
   onOpenModelSettings
 }: SummaryGeneratorButtonGroupProps) {
   const [isCheckingModels, setIsCheckingModels] = useState(false);
   const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
+  const [templateEditorOpen, setTemplateEditorOpen] = useState(false);
 
   // Expose the function to open the modal via callback registration
   useEffect(() => {
@@ -348,6 +352,22 @@ export function SummaryGeneratorButtonGroup({
           </DropdownMenuContent>
         </DropdownMenu>
       )}
+
+      {/* Manage templates button */}
+      <Button
+        variant="outline"
+        size="sm"
+        title="Manage templates"
+        onClick={() => setTemplateEditorOpen(true)}
+      >
+        <Pencil className="h-4 w-4" />
+      </Button>
+
+      <TemplateEditorDialog
+        open={templateEditorOpen}
+        onOpenChange={setTemplateEditorOpen}
+        onTemplatesChanged={onTemplatesChanged}
+      />
     </ButtonGroup>
   );
 }

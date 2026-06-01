@@ -600,6 +600,7 @@ pub fn run() {
         .manage(Arc::new(tokio::sync::Mutex::new(None::<tokio::sync::watch::Sender<bool>>)))
         .manage(dictionary::new_dictionary_state())
         .manage(Arc::new(tokio::sync::RwLock::new(diarization::DiarizationState::new(diarization::DiarizationConfig::default()))))
+        .manage(audio::transcription::new_enhancement_state())
         .setup(|_app| {
             log::info!("Application setup complete");
 
@@ -878,6 +879,12 @@ pub fn run() {
             summary::template_commands::api_list_templates,
             summary::template_commands::api_get_template_details,
             summary::template_commands::api_validate_template,
+            summary::template_commands::api_get_template_json,
+            summary::template_commands::api_save_template,
+            summary::template_commands::api_reset_template,
+            summary::template_commands::api_create_template,
+            summary::template_commands::api_delete_template,
+            summary::template_commands::api_duplicate_template,
             // Built-in AI commands
             summary::summary_engine::commands::builtin_ai_list_models,
             summary::summary_engine::commands::builtin_ai_get_model_info,
@@ -990,6 +997,10 @@ pub fn run() {
             diarization::commands::merge_speakers,
             diarization::commands::is_diarization_available,
             diarization::commands::set_diarization_config,
+            // Parallel enhancement pipeline
+            audio::transcription::enhancement::get_enhancement_config,
+            audio::transcription::enhancement::set_enhancement_config,
+            audio::transcription::enhancement::get_enhancement_stats,
             // Screen context
             screen_context::commands::get_screen_context,
             screen_context::commands::get_active_window_info,
