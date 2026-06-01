@@ -1,4 +1,5 @@
 import { VirtualizedTranscriptView } from '@/components/VirtualizedTranscriptView';
+import ScreenContextTimeline from '@/components/ScreenContextTimeline';
 import { PermissionWarning } from '@/components/PermissionWarning';
 import { Button } from '@/components/ui/button';
 import { ButtonGroup } from '@/components/ui/button-group';
@@ -116,6 +117,7 @@ export function TranscriptPanel({
               enableStreaming={isRecording}
               showConfidence={true}
             />
+            <ScreenContextTimeline isRecording={isRecording} />
           </div>
         </div>
       </div>
