@@ -3,9 +3,10 @@
 
 use crate::state::AppState;
 use chrono::Utc;
-use log::{info};
+use log::info;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
+use std::sync::Arc;
 use tauri::{AppHandle, Emitter, Manager, Runtime};
 
 pub mod commands;
@@ -119,6 +120,32 @@ pub async fn export_meeting_markdown<R: Runtime>(
     md.push_str(&format!("duration: \"{}\"\n", duration_display));
     md.push_str(&format!("segments: {}\n", segments.len()));
     md.push_str(&format!("exported_at: {}\n", Utc::now().to_rfc3339()));
+
+    // Speaker info if diarization state is available
+    if let Some(diar_state) = app.try_state::<Arc<tokio::sync::RwLock<crate::diarization::DiarizationState>>>() {
+        let ds = diar_state.read().await;
+        if !ds.meeting_speakers.is_empty() {
+            md.push_str("speakers:\n");
+            for speaker in &ds.meeting_speakers {
+                md.push_str(&format!("  - id: \"{}\"\n    name: \"{}\"\n", speaker.id, speaker.label));
+            }
+        }
+    }
+
+    // Screen context summary if available
+    if let Some(screen_state) = app.try_state::<Arc<tokio::sync::RwLock<crate::screen_context::ScreenContextState>>>() {
+        let ss = screen_state.read().await;
+        if !ss.snapshots.is_empty() {
+            let apps: std::collections::HashSet<&str> = ss.snapshots.iter()
+                .map(|s| s.active_app.as_str())
+                .collect();
+            md.push_str("context_apps:\n");
+            for app_name in &apps {
+                md.push_str(&format!("  - \"{}\"\n", app_name));
+            }
+        }
+    }
+
     md.push_str("---\n\n");
 
     // Title
@@ -147,6 +174,27 @@ pub async fn export_meeting_markdown<R: Runtime>(
         // Fallback to chunks if no segments
         for chunk in &chunks {
             md.push_str(&format!("{}\n\n", chunk.transcript_text));
+        }
+    }
+
+    // Screen context section
+    if let Some(screen_state) = app.try_state::<Arc<tokio::sync::RwLock<crate::screen_context::ScreenContextState>>>() {
+        let ss = screen_state.read().await;
+        if !ss.snapshots.is_empty() {
+            md.push_str("## Context (Screen Activity)\n\n");
+            for snapshot in &ss.snapshots {
+                let mins = (snapshot.audio_time / 60.0) as u64;
+                let secs = (snapshot.audio_time % 60.0) as u64;
+                let url_str = snapshot.url.as_deref().unwrap_or("");
+                md.push_str(&format!(
+                    "- [{:02}:{:02}] **{}** — {}{}\n",
+                    mins, secs,
+                    snapshot.active_app,
+                    snapshot.window_title,
+                    if url_str.is_empty() { String::new() } else { format!(" ({})", url_str) }
+                ));
+            }
+            md.push_str("\n");
         }
     }
 

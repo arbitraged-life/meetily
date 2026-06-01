@@ -42,6 +42,7 @@ pub mod calendar;
 pub mod config;
 pub mod console_utils;
 pub mod database;
+pub mod diarization;
 pub mod dictionary;
 pub mod export;
 pub mod meeting_detect;
@@ -50,6 +51,7 @@ pub mod ollama;
 pub mod onboarding;
 pub mod openai;
 pub mod anthropic;
+pub mod screen_context;
 pub mod groq;
 pub mod openrouter;
 pub mod parakeet_engine;
@@ -723,23 +725,35 @@ pub fn run() {
             // Export hooks
             export::commands::export_meeting,
             export::commands::get_export_dir,
-            // Calendar commands
+            // Calendar
             calendar::commands::set_calendar_url,
             calendar::commands::get_calendar_events,
             calendar::commands::get_active_calendar_events,
             calendar::commands::set_auto_record,
             calendar::commands::refresh_calendar,
-            // Meeting auto-detection commands
+            // Meeting auto-detection
             meeting_detect::commands::set_meeting_detection,
             meeting_detect::commands::get_detection_state,
             meeting_detect::commands::set_meeting_apps,
             meeting_detect::commands::set_silence_timeout,
-            // Dictionary commands
+            // Dictionary sync
             dictionary::commands::get_dictionary,
             dictionary::commands::add_dictionary_entry,
             dictionary::commands::remove_dictionary_entry,
             dictionary::commands::update_dictionary_entry,
             dictionary::commands::import_voiceink_dictionary,
+            // Speaker diarization
+            diarization::commands::get_meeting_speakers,
+            diarization::commands::get_known_speakers,
+            diarization::commands::rename_speaker,
+            diarization::commands::merge_speakers,
+            diarization::commands::is_diarization_available,
+            diarization::commands::set_diarization_config,
+            // Screen context
+            screen_context::commands::get_screen_context,
+            screen_context::commands::get_active_window_info,
+            screen_context::commands::set_screen_context_config,
+            screen_context::commands::toggle_screen_capture,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
