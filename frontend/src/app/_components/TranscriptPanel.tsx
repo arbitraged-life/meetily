@@ -7,10 +7,11 @@ import { Copy, GlobeIcon, Tag } from 'lucide-react';
 import { useTranscripts } from '@/contexts/TranscriptContext';
 import { useConfig } from '@/contexts/ConfigContext';
 import { useRecordingState } from '@/contexts/RecordingStateContext';
+import MeetingNotesPanel from '@/components/MeetingNotesPanel';
 import { usePermissionCheck } from '@/hooks/usePermissionCheck';
 import { ModalType } from '@/hooks/useModalState';
 import { useIsLinux } from '@/hooks/usePlatform';
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 
 /**
  * TranscriptPanel Component
@@ -37,6 +38,16 @@ export function TranscriptPanel({
   const { isRecording, isPaused } = useRecordingState();
   const { checkPermissions, isChecking, hasSystemAudio, hasMicrophone } = usePermissionCheck();
   const isLinux = useIsLinux();
+
+  // Track recording start time for notes timestamps
+  const [recordingStartTime, setRecordingStartTime] = useState<number | null>(null);
+  useEffect(() => {
+    if (isRecording && !recordingStartTime) {
+      setRecordingStartTime(Date.now());
+    } else if (!isRecording) {
+      setRecordingStartTime(null);
+    }
+  }, [isRecording]);
 
   // Convert transcripts to segments for virtualized view
   const segments = useMemo(() =>
@@ -121,6 +132,10 @@ export function TranscriptPanel({
       <div className="pb-20">
         <div className="flex justify-center">
           <div className="w-2/3 max-w-[750px]">
+            <MeetingNotesPanel
+              isRecording={isRecording}
+              recordingStartTime={recordingStartTime}
+            />
             <VirtualizedTranscriptView
               segments={segments}
               isRecording={isRecording}

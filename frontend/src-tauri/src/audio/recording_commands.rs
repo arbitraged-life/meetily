@@ -1222,3 +1222,31 @@ pub async fn attempt_device_reconnect(
         }
     }
 }
+
+// ============================================================================
+// MEETING NOTES COMMANDS (#389)
+// ============================================================================
+
+/// Add a timestamped note during active recording
+#[tauri::command]
+pub fn add_meeting_note(text: String, timestamp_seconds: f64) -> Result<super::recording_saver::MeetingNote, String> {
+    let manager_guard = RECORDING_MANAGER.lock().unwrap();
+    match manager_guard.as_ref() {
+        Some(manager) => {
+            let note = manager.add_note(text, timestamp_seconds);
+            info!("📝 Note added at {}: {}", note.display_time, &note.text[..note.text.len().min(50)]);
+            Ok(note)
+        }
+        None => Err("No active recording session".to_string()),
+    }
+}
+
+/// Get all notes from the current recording session
+#[tauri::command]
+pub fn get_meeting_notes() -> Result<Vec<super::recording_saver::MeetingNote>, String> {
+    let manager_guard = RECORDING_MANAGER.lock().unwrap();
+    match manager_guard.as_ref() {
+        Some(manager) => Ok(manager.get_notes()),
+        None => Err("No active recording session".to_string()),
+    }
+}

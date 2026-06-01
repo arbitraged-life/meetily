@@ -24,6 +24,16 @@ pub struct TranscriptSegment {
     pub sequence_id: u64,
 }
 
+/// A timestamped note taken during recording (#389)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MeetingNote {
+    pub id: String,
+    pub text: String,
+    pub timestamp_seconds: f64,  // Seconds from recording start
+    pub display_time: String,    // Formatted "[MM:SS]"
+    pub created_at: String,      // ISO timestamp
+}
+
 /// Meeting metadata structure
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MeetingMetadata {
@@ -54,6 +64,7 @@ pub struct RecordingSaver {
     save_folder: Option<PathBuf>,
     metadata: Option<MeetingMetadata>,
     transcript_segments: Arc<Mutex<Vec<TranscriptSegment>>>,
+    meeting_notes: Arc<Mutex<Vec<MeetingNote>>>,
     chunk_receiver: Option<mpsc::UnboundedReceiver<AudioChunk>>,
     is_saving: Arc<Mutex<bool>>,
 }
@@ -67,6 +78,7 @@ impl RecordingSaver {
             save_folder: None,
             metadata: None,
             transcript_segments: Arc::new(Mutex::new(Vec::new())),
+            meeting_notes: Arc::new(Mutex::new(Vec::new())),
             chunk_receiver: None,
             is_saving: Arc::new(Mutex::new(false)),
         }
@@ -428,6 +440,17 @@ impl RecordingSaver {
                 return Err("Transcript file verification failed".to_string());
             }
             info!("✅ Transcripts saved and verified at: {}", transcript_path.display());
+
+            // Save meeting notes if any were taken (#389)
+            let notes = self.get_notes();
+            if !notes.is_empty() {
+                let notes_path = folder.join("notes.json");
+                let notes_json = serde_json::to_string_pretty(&notes)
+                    .map_err(|e| format!("Failed to serialize notes: {}", e))?;
+                std::fs::write(&notes_path, notes_json)
+                    .map_err(|e| format!("Failed to write notes: {}", e))?;
+                info!("📝 {} meeting notes saved to: {}", notes.len(), notes_path.display());
+            }
         }
 
         // Update metadata to completed status with actual recording duration
@@ -492,6 +515,32 @@ impl RecordingSaver {
     /// Get meeting name (for reload sync)
     pub fn get_meeting_name(&self) -> Option<String> {
         self.meeting_name.clone()
+    }
+
+    /// Add a timestamped note during recording (#389)
+    pub fn add_note(&self, text: String, timestamp_seconds: f64) -> MeetingNote {
+        let minutes = (timestamp_seconds as u64) / 60;
+        let seconds = (timestamp_seconds as u64) % 60;
+        let note = MeetingNote {
+            id: uuid::Uuid::new_v4().to_string(),
+            text,
+            timestamp_seconds,
+            display_time: format!("[{:02}:{:02}]", minutes, seconds),
+            created_at: chrono::Utc::now().to_rfc3339(),
+        };
+        if let Ok(mut notes) = self.meeting_notes.lock() {
+            notes.push(note.clone());
+        }
+        note
+    }
+
+    /// Get all notes taken during this recording
+    pub fn get_notes(&self) -> Vec<MeetingNote> {
+        if let Ok(notes) = self.meeting_notes.lock() {
+            notes.clone()
+        } else {
+            Vec::new()
+        }
     }
 }
 

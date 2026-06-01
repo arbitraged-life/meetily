@@ -455,6 +455,16 @@ impl RecordingManager {
         self.recording_saver.get_transcript_segments()
     }
 
+    /// Add a timestamped note during recording (#389)
+    pub fn add_note(&self, text: String, timestamp_seconds: f64) -> super::recording_saver::MeetingNote {
+        self.recording_saver.add_note(text, timestamp_seconds)
+    }
+
+    /// Get all notes from current recording
+    pub fn get_notes(&self) -> Vec<super::recording_saver::MeetingNote> {
+        self.recording_saver.get_notes()
+    }
+
     /// Get meeting name from current recording session
     /// Used for syncing frontend state after page reload during active recording
     pub fn get_meeting_name(&self) -> Option<String> {
