@@ -70,3 +70,7 @@ pub type CalendarState = Arc<RwLock<Vec<CalendarEvent>>>;
 pub fn new_calendar_state() -> CalendarState {
     Arc::new(RwLock::new(Vec::new()))
 }
+
+// Google Calendar OAuth integration (#449)
+pub mod google_calendar;
+pub mod google_commands;

@@ -119,6 +119,7 @@ dashmap = "6.1.0"
 
 # Directories
 dirs = "5.0.1"
+urlencoding = "2.1"
 notify = { version = "6", default-features = false, features = ["macos_kqueue"] }
 
 # Additional dependencies for notification system

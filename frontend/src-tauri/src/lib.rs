@@ -806,6 +806,16 @@ pub fn run() {
             audio::recording_commands::set_meeting_detection_enabled,
             audio::recording_commands::is_meeting_detection_enabled,
             audio::recording_commands::poll_meeting_detection_events,
+            // Google Calendar integration (#449)
+            calendar::google_commands::google_calendar_init,
+            calendar::google_commands::google_calendar_get_auth_url,
+            calendar::google_commands::google_calendar_auth_callback,
+            calendar::google_commands::google_calendar_disconnect,
+            calendar::google_commands::google_calendar_get_status,
+            calendar::google_commands::google_calendar_get_events,
+            calendar::google_commands::google_calendar_set_auto_record,
+            calendar::google_commands::google_calendar_set_config,
+            calendar::google_commands::google_calendar_get_config,
             // Device monitoring commands (AirPods/Bluetooth disconnect/reconnect)
             audio::recording_commands::poll_audio_device_events,
             audio::recording_commands::get_reconnection_status,
