@@ -120,6 +120,21 @@ async fn start_recording<R: Runtime>(
 
             log_info!("Recording started successfully");
 
+            // Start screen context capture
+            if let Some(screen_state) = app.try_state::<std::sync::Arc<tokio::sync::RwLock<screen_context::ScreenContextState>>>() {
+                let mut s = screen_state.write().await;
+                s.is_capturing = true;
+                s.snapshots.clear();
+                let state_clone = (*screen_state).clone();
+                let (tx, rx) = tokio::sync::watch::channel(false);
+                // Store the stop sender somewhere accessible
+                if let Some(stop_tx) = app.try_state::<std::sync::Arc<tokio::sync::Mutex<Option<tokio::sync::watch::Sender<bool>>>>>() {
+                    *stop_tx.lock().await = Some(tx);
+                }
+                drop(s);
+                tauri::async_runtime::spawn(screen_context::start_capture_loop(state_clone, rx));
+            }
+
             // Show recording started notification through NotificationManager
             // This respects user's notification preferences
             let notification_manager_state = app.state::<NotificationManagerState<R>>();
@@ -169,6 +184,17 @@ async fn stop_recording<R: Runtime>(app: AppHandle<R>, args: RecordingArgs) -> R
         Ok(_) => {
             RECORDING_FLAG.store(false, Ordering::SeqCst);
             tray::update_tray_menu(&app);
+
+            // Stop screen context capture
+            if let Some(stop_tx) = app.try_state::<std::sync::Arc<tokio::sync::Mutex<Option<tokio::sync::watch::Sender<bool>>>>>() {
+                if let Some(tx) = stop_tx.lock().await.take() {
+                    let _ = tx.send(true);
+                }
+            }
+            if let Some(screen_state) = app.try_state::<std::sync::Arc<tokio::sync::RwLock<screen_context::ScreenContextState>>>() {
+                let mut s = screen_state.write().await;
+                s.is_capturing = false;
+            }
 
             // Create the save directory if it doesn't exist
             if let Some(parent) = std::path::Path::new(&args.save_path).parent() {
@@ -408,6 +434,8 @@ pub fn run() {
         )) as NotificationManagerState<tauri::Wry>)
         .manage(audio::init_system_audio_state())
         .manage(summary::summary_engine::ModelManagerState(Arc::new(tokio::sync::Mutex::new(None))))
+        .manage(Arc::new(RwLock::new(screen_context::ScreenContextState::default())))
+        .manage(Arc::new(tokio::sync::Mutex::new(None::<tokio::sync::watch::Sender<bool>>)))
         .setup(|_app| {
             log::info!("Application setup complete");
 

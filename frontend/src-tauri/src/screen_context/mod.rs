@@ -67,6 +67,12 @@ impl ScreenContextState {
     }
 }
 
+impl Default for ScreenContextState {
+    fn default() -> Self {
+        Self::new(ScreenContextConfig::default())
+    }
+}
+
 /// Get the currently focused application and window title using AppleScript
 pub fn get_active_window() -> Result<(String, String), String> {
     // Get frontmost app name
