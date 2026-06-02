@@ -9,8 +9,13 @@ use tokio::sync::RwLock;
 pub fn start_calendar_poller(
     config: Arc<RwLock<CalendarConfig>>,
     state: CalendarState,
-) -> tokio::task::JoinHandle<()> {
-    tokio::spawn(async move {
+) -> tauri::async_runtime::JoinHandle<()> {
+    // Use Tauri's managed async runtime rather than a bare `tokio::spawn`.
+    // This callback runs inside Tauri's setup/event-loop context where no
+    // Tokio reactor is entered on the current thread, so `tokio::spawn`
+    // panics with "there is no reactor running". `tauri::async_runtime::spawn`
+    // always targets Tauri's global runtime and is safe here.
+    tauri::async_runtime::spawn(async move {
         loop {
             let cfg = config.read().await.clone();
 
