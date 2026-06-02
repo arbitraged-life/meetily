@@ -300,7 +300,14 @@ pub async fn generate_meeting_summary(
             }
 
             info!("Processing chunk {}/{}", i + 1, num_chunks);
-            let user_prompt_chunk = render_summary_chunk_prompt(summary_chunk_prompt, chunk.as_str());
+            // Wrap chunk in transcription tags if feature enabled (prevents LLM from
+            // answering questions found in the meeting dialog)
+            let effective_chunk = if crate::feature_flags::transcript_tags::TAGS_ENABLED.load(std::sync::atomic::Ordering::Relaxed) {
+                crate::feature_flags::transcript_tags::wrap_transcript_chunk(chunk.as_str())
+            } else {
+                chunk.clone()
+            };
+            let user_prompt_chunk = render_summary_chunk_prompt(summary_chunk_prompt, effective_chunk.as_str());
 
             match generate_summary(
                 client,

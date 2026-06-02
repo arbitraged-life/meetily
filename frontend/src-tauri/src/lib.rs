@@ -67,6 +67,7 @@ pub mod distributed_notifications;
 pub mod utils;
 pub mod whisper_engine;
 pub mod meeting_domain;
+pub mod feature_flags;
 
 use audio::{list_audio_devices, AudioDevice, trigger_audio_permission};
 use log::{error as log_error, info as log_info};
@@ -188,6 +189,14 @@ async fn start_recording<R: Runtime>(
             RECORDING_FLAG.store(true, Ordering::SeqCst);
             tray::update_tray_menu(&app);
 
+            // Auto-mute system audio if feature is enabled
+            if let Some(ff_state) = app.try_state::<feature_flags::FeatureFlagState>() {
+                if ff_state.is_enabled(feature_flags::Feature::AutoMute).await {
+                    feature_flags::system_mute::mute_system_audio();
+                    feature_flags::system_mute::write_mute_flag();
+                }
+            }
+
             log_info!("Recording started successfully");
 
             // Start screen context capture
@@ -254,6 +263,10 @@ async fn stop_recording<R: Runtime>(app: AppHandle<R>, args: RecordingArgs) -> R
         Ok(_) => {
             RECORDING_FLAG.store(false, Ordering::SeqCst);
             tray::update_tray_menu(&app);
+
+            // Auto-unmute system audio
+            feature_flags::system_mute::unmute_system_audio();
+            feature_flags::system_mute::clear_mute_flag();
 
             // Stop screen context capture
             if let Some(stop_tx) = app.try_state::<std::sync::Arc<tokio::sync::Mutex<Option<tokio::sync::watch::Sender<bool>>>>>() {
@@ -607,8 +620,12 @@ pub fn run() {
         .manage(calendar::new_calendar_state())
         .manage(Arc::new(RwLock::new(calendar::CalendarConfig::default())))
         .manage(Arc::new(RwLock::new(meeting_detect::DetectionConfig::default())))
+        .manage(feature_flags::FeatureFlagState::new())
         .setup(|_app| {
             log::info!("Application setup complete");
+
+            // Initialize feature flags and crash-recovery mute check
+            feature_flags::system_mute::ensure_unmuted_on_startup();
 
             // Atoll notch bridge — push meeting state to macOS notch
             atoll_bridge::setup_atoll_listener(&_app.handle());
@@ -1049,6 +1066,9 @@ pub fn run() {
             screen_context::commands::get_active_window_info,
             screen_context::commands::set_screen_context_config,
             screen_context::commands::toggle_screen_capture,
+            feature_flags::commands::get_feature_flags,
+            feature_flags::commands::set_feature_flag,
+            feature_flags::url_import::import_audio_from_url,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")

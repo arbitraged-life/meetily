@@ -3,6 +3,7 @@ import { ModelConfig, ModelSettingsModal } from "./ModelSettingsModal"
 import { TranscriptModelProps, TranscriptSettings } from "./TranscriptSettings"
 import { RecordingSettings, RecordingPreferences } from "./RecordingSettings"
 import { CalendarAutoRecordSettings } from "./CalendarAutoRecordSettings"
+import { FeatureSettings } from "./FeatureSettings"
 import { About } from "./About";
 
 interface SettingTabsProps {
@@ -38,6 +39,7 @@ export function SettingTabs({
     <TabsTrigger value="modelSettings">Ai Summary</TabsTrigger>
     <TabsTrigger value="recordingSettings">Preferences</TabsTrigger>
     <TabsTrigger value="calendarSettings">Calendar & Auto-Record</TabsTrigger>
+    <TabsTrigger value="features">Features</TabsTrigger>
     <TabsTrigger value="about">About</TabsTrigger>
   </TabsList>
   <TabsContent value="modelSettings">
@@ -60,6 +62,9 @@ onSave={onSave}
   </TabsContent>
   <TabsContent value="calendarSettings">
     <CalendarAutoRecordSettings />
+  </TabsContent>
+  <TabsContent value="features">
+    <FeatureSettings />
   </TabsContent>
   <TabsContent value="about">
     <About />

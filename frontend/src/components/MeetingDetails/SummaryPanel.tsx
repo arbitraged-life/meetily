@@ -7,6 +7,7 @@ import { EmptyStateSummary } from '@/components/EmptyStateSummary';
 import { ModelConfig } from '@/components/ModelSettingsModal';
 import { SummaryGeneratorButtonGroup } from './SummaryGeneratorButtonGroup';
 import { SummaryUpdaterButtonGroup } from './SummaryUpdaterButtonGroup';
+import { SummaryProgressBar } from './SummaryProgressBar';
 import Analytics from '@/lib/analytics';
 import { RefObject } from 'react';
 
@@ -101,8 +102,11 @@ export function SummaryPanel({
           onChange={onTitleChange}
         /> */}
 
-        {/* Button groups - only show when summary exists */}
-        {aiSummary && !isSummaryLoading && (
+        {/* Button groups - show whenever a summary exists, INCLUDING while
+            regenerating, so the user keeps full access to AI Model settings,
+            templates and the Stop control instead of being trapped behind a
+            blocking spinner. */}
+        {aiSummary && (
           <div className="flex items-center justify-center w-full pt-0 gap-2">
             {/* Left-aligned: Summary Generator Button Group */}
             <div className="flex-shrink-0">
@@ -141,11 +145,22 @@ export function SummaryPanel({
             </div>
           </div>
         )}
+
+        {/* Non-blocking progress bar - visible during generation/regeneration */}
+        {isSummaryLoading && (
+          <SummaryProgressBar
+            status={summaryStatus}
+            message={getSummaryStatusMessage(summaryStatus)}
+            className="mt-3"
+          />
+        )}
       </div>
 
-      {isSummaryLoading ? (
+      {isSummaryLoading && !aiSummary ? (
+        /* First-time generation (no existing summary to show yet).
+           Keep the toolbar + progress bar accessible; no blocking overlay. */
         <div className="flex flex-col h-full">
-          {/* Show button group during generation */}
+          {/* Show button group during generation so settings stay reachable */}
           <div className="flex items-center justify-center pt-8 pb-4">
             <SummaryGeneratorButtonGroup
               modelConfig={modelConfig}
@@ -164,11 +179,16 @@ export function SummaryPanel({
               onOpenModelSettings={onOpenModelSettings}
             />
           </div>
-          {/* Loading spinner */}
+          {/* Progress indicator (non-blocking) */}
           <div className="flex items-center justify-center flex-1">
-            <div className="text-center">
-              <div className="inline-block animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mb-4"></div>
-              <p className="text-gray-600">Generating AI Summary...</p>
+            <div className="text-center w-full max-w-sm px-8">
+              <SummaryProgressBar
+                status={summaryStatus}
+                message={getSummaryStatusMessage(summaryStatus)}
+              />
+              <p className="text-gray-500 text-sm mt-3">
+                You can keep using settings and the rest of the app while this runs.
+              </p>
             </div>
           </div>
         </div>
