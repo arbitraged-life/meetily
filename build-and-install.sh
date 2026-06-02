@@ -10,6 +10,12 @@ INSTALL_DIR="/Applications/Meetily.app"
 
 echo "🔨 Building Meetily..."
 cd "$REPO_DIR/frontend"
+# Updater signing: use the fork's private key if present so the .app.tar.gz
+# updater bundle gets signed (no-op if the key isn't on this machine).
+if [ -z "$TAURI_SIGNING_PRIVATE_KEY" ] && [ -f "$HOME/.tauri/meetily.key" ]; then
+    export TAURI_SIGNING_PRIVATE_KEY="$(cat "$HOME/.tauri/meetily.key")"
+    export TAURI_SIGNING_PRIVATE_KEY_PASSWORD="${TAURI_SIGNING_PRIVATE_KEY_PASSWORD:-}"
+fi
 ORT_LIB_LOCATION=/opt/homebrew/lib pnpm tauri build -- --features coreml 2>&1 | grep -v "^$" | tail -5 || true
 
 if [ ! -d "$APP_BUNDLE" ]; then
