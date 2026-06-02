@@ -104,6 +104,14 @@ impl SettingsRepository {
         );
         sqlx::query(&query).bind(api_key).execute(pool).await?;
 
+        // #885: mirror into the central NERV keychain registry so the key survives
+        // DB resets / re-installs. Best-effort — keychain failure must not break save.
+        if !api_key.is_empty() {
+            if let Err(e) = crate::key_registry::set_key(provider, api_key) {
+                log::warn!("key_registry mirror failed for {}: {}", provider, e);
+            }
+        }
+
         Ok(())
     }
 
@@ -205,6 +213,13 @@ impl SettingsRepository {
             api_key_column, crate::config::DEFAULT_PARAKEET_MODEL, api_key_column
         );
         sqlx::query(&query).bind(api_key).execute(pool).await?;
+
+        // #885: mirror into the central NERV keychain registry (best-effort).
+        if !api_key.is_empty() {
+            if let Err(e) = crate::key_registry::set_key(provider, api_key) {
+                log::warn!("key_registry mirror failed for {}: {}", provider, e);
+            }
+        }
 
         Ok(())
     }

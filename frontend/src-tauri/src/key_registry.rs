@@ -28,10 +28,14 @@ pub const KNOWN_PROVIDERS: &[&str] = &[
 ];
 
 /// Map a Meetily provider id to the registry's canonical provider id.
-/// Meetily calls Anthropic "claude"; the registry uses "anthropic".
+/// Meetily calls Anthropic "claude" and uses camelCase ids like "elevenLabs"
+/// in its transcript settings; the registry uses lowercase canonical ids.
 fn canonical(provider: &str) -> &str {
     match provider {
         "claude" => "anthropic",
+        "elevenLabs" => "elevenlabs",
+        "assemblyAI" => "assemblyai",
+        "localWhisper" => "localwhisper",
         other => other,
     }
 }
