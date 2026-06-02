@@ -3,7 +3,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
 
-use log::{debug, info, warn};
+use log::{info, warn};
 use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc;
 
@@ -19,6 +19,7 @@ const MEETING_PROCESSES: &[(&str, &str)] = &[
 ];
 
 /// More specific detection: window titles that indicate active call
+#[allow(dead_code)] // reserved for stricter window-title detection
 const MEETING_WINDOW_INDICATORS: &[&str] = &[
     "Zoom Meeting",
     "Meeting in progress",

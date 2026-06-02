@@ -2,10 +2,8 @@
 
 pub mod commands;
 
-use crate::audio::system_detector;
 use crate::calendar::{CalendarConfig, CalendarState};
-use chrono::Utc;
-use log::{error, info, warn};
+use log::{info, warn};
 use serde::{Deserialize, Serialize};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;

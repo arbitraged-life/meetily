@@ -1,9 +1,8 @@
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
-use std::time::Duration;
 
-use chrono::{DateTime, Utc};
-use log::{error, info, warn};
+use chrono::Utc;
+use log::info;
 use serde::{Deserialize, Serialize};
 use tokio::sync::Mutex as AsyncMutex;
 
@@ -284,6 +283,7 @@ impl GoogleCalendarClient {
         }
 
         #[derive(Deserialize)]
+        #[allow(dead_code)] // email parsed from API but not yet surfaced
         struct Attendee {
             email: Option<String>,
         }

@@ -1,6 +1,6 @@
 // Tauri commands for Atoll bridge (manual triggers from frontend)
 
-use super::{dismiss_meeting, present_meeting, update_meeting};
+use super::{dismiss_meeting, present_meeting};
 
 /// Manually push a meeting notification to Atoll notch
 #[tauri::command]

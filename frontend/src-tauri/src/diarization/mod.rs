@@ -7,10 +7,7 @@ pub mod clustering;
 pub mod speaker_db;
 
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use std::path::PathBuf;
-use std::sync::Arc;
-use tokio::sync::RwLock;
 
 /// A speaker identified in a meeting
 #[derive(Debug, Clone, Serialize, Deserialize)]

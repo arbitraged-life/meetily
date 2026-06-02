@@ -17,3 +17,9 @@ anyhow = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 tokio = { version = "1.32.0", features = ["full"] }
+
+# Profiles must be defined at the workspace root (ignored in member crates).
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = 3  # Optimize for runtime performance

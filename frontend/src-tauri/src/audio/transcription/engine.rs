@@ -47,6 +47,67 @@ impl TranscriptionEngine {
     }
 }
 
+impl Clone for TranscriptionEngine {
+    fn clone(&self) -> Self {
+        match self {
+            Self::Whisper(e) => Self::Whisper(e.clone()),
+            Self::Parakeet(e) => Self::Parakeet(e.clone()),
+            Self::Provider(p) => Self::Provider(p.clone()),
+        }
+    }
+}
+
+/// Build an ordered list of fallback engines from already-loaded local engines.
+///
+/// When the primary transcription engine fails on a chunk, the worker retries
+/// with these fallbacks (in order) instead of dropping the chunk. Only engines
+/// that already have a model loaded in memory are included, so fallback adds no
+/// model-load latency on the hot path. The primary engine's own variant is
+/// excluded to avoid retrying the same failing engine.
+pub async fn build_fallback_engines(primary: &TranscriptionEngine) -> Vec<TranscriptionEngine> {
+    let mut fallbacks = Vec::new();
+
+    // Parakeet as a fallback (offline, fast) when it is not the primary.
+    if !matches!(primary, TranscriptionEngine::Parakeet(_)) {
+        let parakeet = {
+            crate::parakeet_engine::commands::PARAKEET_ENGINE
+                .lock()
+                .ok()
+                .and_then(|g| g.as_ref().cloned())
+        };
+        if let Some(engine) = parakeet {
+            if engine.is_model_loaded().await {
+                info!("🔁 Registered Parakeet as transcription fallback");
+                fallbacks.push(TranscriptionEngine::Parakeet(engine));
+            }
+        }
+    }
+
+    // Whisper as a fallback (offline, robust) when it is not the primary.
+    if !matches!(primary, TranscriptionEngine::Whisper(_)) {
+        let whisper = {
+            crate::whisper_engine::commands::WHISPER_ENGINE
+                .lock()
+                .ok()
+                .and_then(|g| g.as_ref().cloned())
+        };
+        if let Some(engine) = whisper {
+            if engine.is_model_loaded().await {
+                info!("🔁 Registered Whisper as transcription fallback");
+                fallbacks.push(TranscriptionEngine::Whisper(engine));
+            }
+        }
+    }
+
+    if fallbacks.is_empty() {
+        info!("ℹ️ No additional transcription engines loaded — fallback disabled for this session");
+    } else {
+        info!("✅ {} transcription fallback engine(s) available", fallbacks.len());
+    }
+
+    fallbacks
+}
+
 // ============================================================================
 // MODEL VALIDATION AND INITIALIZATION
 // ============================================================================

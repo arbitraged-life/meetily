@@ -2,7 +2,7 @@
 //! Only active when `url_import_enabled` feature flag is true.
 
 use anyhow::{anyhow, Result};
-use log::{debug, error, info, warn};
+use log::info;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use std::process::Command;

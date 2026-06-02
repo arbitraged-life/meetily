@@ -4,7 +4,7 @@
 pub mod commands;
 
 use chrono::{DateTime, Utc};
-use log::{error, info};
+use log::info;
 use serde::{Deserialize, Serialize};
 use std::process::Command;
 use std::sync::Arc;

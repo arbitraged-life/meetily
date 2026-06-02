@@ -4,8 +4,7 @@ use std::sync::Arc;
 use tokio::sync::Mutex as AsyncMutex;
 
 use super::google_calendar::{
-    CalendarAutoRecordConfig, CalendarEvent, CalendarIntegrationStatus,
-    GoogleAuthToken, GoogleCalendarClient, load_token_from_disk, save_token_to_disk,
+    CalendarAutoRecordConfig, CalendarEvent, CalendarIntegrationStatus, GoogleCalendarClient, load_token_from_disk, save_token_to_disk,
 };
 
 static CALENDAR_CLIENT: Lazy<Arc<AsyncMutex<Option<GoogleCalendarClient>>>> =
