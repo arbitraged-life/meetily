@@ -26,6 +26,7 @@ pub mod recording_saver;
 pub mod incremental_saver;  // NEW: Incremental audio saving with checkpoints
 pub mod level_monitor;
 pub mod simple_level_monitor;
+pub mod mic_autoselect;  // NEW: auto-select best mic by input level (#514)
 pub mod buffer_pool;
 pub mod post_processor;
 pub mod hardware_detector;

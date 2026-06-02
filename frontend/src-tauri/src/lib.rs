@@ -777,6 +777,7 @@ pub fn run() {
             hotkey::set_recording_hotkey,
             appearance::get_dock_visibility,
             appearance::set_dock_visibility,
+            audio::mic_autoselect::auto_select_microphone,
             stop_recording,
             is_recording,
             get_transcription_status,
