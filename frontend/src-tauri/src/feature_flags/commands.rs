@@ -34,6 +34,7 @@ pub async fn set_feature_flag<R: Runtime>(
             "analytics_enabled" | "analyticsEnabled" => flags.analytics_enabled = enabled,
             "whisper_preload" | "whisperPreload" => flags.whisper_preload = enabled,
             "parakeet_preload" | "parakeetPreload" => flags.parakeet_preload = enabled,
+            "builtin_ai_preload" | "builtinAiPreload" => flags.builtin_ai_preload = enabled,
             _ => return Err(format!("Unknown feature flag: {}", feature)),
         }
     }

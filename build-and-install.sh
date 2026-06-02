@@ -46,14 +46,24 @@ install_app() {
 if install_app "$INSTALL_DIR"; then
   echo "   → installed to $INSTALL_DIR"
 else
-  USER_INSTALL_DIR="$HOME/Applications/Meetily.app"
-  mkdir -p "$HOME/Applications"
-  if install_app "$USER_INSTALL_DIR"; then
-    echo "   ⚠️  /Applications not writable (root-owned bundle?) — installed to $USER_INSTALL_DIR instead"
-    echo "      To put it back in /Applications, run:"
-    echo "      sudo rm -rf \"$INSTALL_DIR\" && sudo cp -R \"$APP_BUNDLE\" \"$INSTALL_DIR\" && sudo chown -R \"$(whoami):staff\" \"$INSTALL_DIR\""
+  # Per user policy: Meetily ALWAYS lives in /Applications — never ~/Applications.
+  # The plain install failed (likely a root-owned bundle left by a prior install).
+  # Try to reclaim /Applications non-interactively first, then with a sudo prompt.
+  echo "   ⚠️  /Applications/Meetily.app blocked (root-owned?) — reclaiming..."
+  reclaim() {
+    local sudo_cmd="$1"
+    $sudo_cmd rm -rf "$INSTALL_DIR" 2>/dev/null \
+      && $sudo_cmd cp -R "$APP_BUNDLE" "$INSTALL_DIR" 2>/dev/null \
+      && $sudo_cmd chown -R "$(whoami):staff" "$INSTALL_DIR" 2>/dev/null \
+      && codesign --force --deep --sign - "$INSTALL_DIR" 2>/dev/null
+  }
+  if reclaim "sudo -n"; then
+    echo "   → reclaimed and installed to $INSTALL_DIR (passwordless sudo)"
+  elif [ -t 0 ] && reclaim "sudo"; then
+    echo "   → reclaimed and installed to $INSTALL_DIR (sudo)"
   else
-    echo "   ❌ Failed to install to both /Applications and ~/Applications" >&2
+    echo "   ❌ Could not write to /Applications. Run this once, then re-run the build:" >&2
+    echo "      sudo rm -rf \"$INSTALL_DIR\" && sudo cp -R \"$APP_BUNDLE\" \"$INSTALL_DIR\" && sudo chown -R \"$(whoami):staff\" \"$INSTALL_DIR\"" >&2
     exit 1
   fi
 fi

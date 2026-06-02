@@ -40,6 +40,8 @@ pub struct FeatureFlags {
     pub whisper_preload: bool,
     /// Eager Parakeet engine initialization on startup (vs lazy on first use)
     pub parakeet_preload: bool,
+    /// Eager ModelManager (built-in AI) initialization on startup (vs lazy on first use)
+    pub builtin_ai_preload: bool,
 }
 
 impl Default for FeatureFlags {
@@ -56,6 +58,7 @@ impl Default for FeatureFlags {
             analytics_enabled: false,      // telemetry — opt-in
             whisper_preload: false,        // lazy-init on first transcription
             parakeet_preload: false,       // lazy-init on first transcription
+            builtin_ai_preload: false,     // lazy-init on first summary
         }
     }
 }
@@ -89,6 +92,7 @@ impl FeatureFlagState {
                     analytics_enabled: store.get("analytics_enabled").and_then(|v| v.as_bool()).unwrap_or(def.analytics_enabled),
                     whisper_preload: store.get("whisper_preload").and_then(|v| v.as_bool()).unwrap_or(def.whisper_preload),
                     parakeet_preload: store.get("parakeet_preload").and_then(|v| v.as_bool()).unwrap_or(def.parakeet_preload),
+                    builtin_ai_preload: store.get("builtin_ai_preload").and_then(|v| v.as_bool()).unwrap_or(def.builtin_ai_preload),
                 };
                 info!("Feature flags loaded: {:?}", flags);
                 transcript_tags::set_enabled(flags.transcript_tags_enabled);
@@ -116,6 +120,7 @@ impl FeatureFlagState {
                 store.set("analytics_enabled", flags.analytics_enabled);
                 store.set("whisper_preload", flags.whisper_preload);
                 store.set("parakeet_preload", flags.parakeet_preload);
+                store.set("builtin_ai_preload", flags.builtin_ai_preload);
                 if let Err(e) = store.save() {
                     warn!("Failed to save feature flags: {}", e);
                 }
@@ -141,6 +146,7 @@ impl FeatureFlagState {
             Feature::Analytics => flags.analytics_enabled,
             Feature::WhisperPreload => flags.whisper_preload,
             Feature::ParakeetPreload => flags.parakeet_preload,
+            Feature::BuiltinAiPreload => flags.builtin_ai_preload,
         }
     }
 }
@@ -158,4 +164,5 @@ pub enum Feature {
     Analytics,
     WhisperPreload,
     ParakeetPreload,
+    BuiltinAiPreload,
 }

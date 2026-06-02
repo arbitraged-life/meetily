@@ -13,6 +13,7 @@ interface FeatureFlags {
   analyticsEnabled: boolean;
   whisperPreload: boolean;
   parakeetPreload: boolean;
+  builtinAiPreload: boolean;
 }
 
 interface FlagDef {
@@ -33,6 +34,7 @@ const FLAG_DEFS: FlagDef[] = [
   // Startup preloading
   { key: "whisperPreload", label: "Preload Whisper Engine", description: "Initialize Whisper model at startup instead of lazy-loading on first use.", category: "startup" },
   { key: "parakeetPreload", label: "Preload Parakeet Engine", description: "Initialize Parakeet model at startup instead of lazy-loading on first use.", category: "startup" },
+  { key: "builtinAiPreload", label: "Preload Built-in AI (ModelManager)", description: "Initialize the built-in AI summary engine at startup instead of lazy-loading on first use.", category: "startup" },
   // Integrations
   { key: "calendarEnabled", label: "Calendar ICS Poller", description: "Background sync of subscribed calendar feeds for auto-record scheduling.", category: "integration" },
   { key: "atollBridgeEnabled", label: "Atoll Notch Bridge", description: "Push meeting state to macOS notch via WebSocket (localhost:9020).", category: "integration" },

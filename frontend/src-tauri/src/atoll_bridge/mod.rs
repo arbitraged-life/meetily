@@ -8,11 +8,8 @@ use log::{debug, error, info, warn};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use tauri::Listener;
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use tokio::sync::RwLock;
-
-static BRIDGE_ACTIVE: AtomicBool = AtomicBool::new(false);
 
 const ATOLL_WS_URL: &str = "ws://localhost:9020";
 const EXPERIENCE_ID: &str = "meetily-meeting";

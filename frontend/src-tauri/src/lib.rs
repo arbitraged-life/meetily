@@ -742,15 +742,17 @@ pub fn run() {
 
             // Initialize ModelManager for summary engine (async, non-blocking)
             let app_handle_for_model_manager = _app.handle().clone();
-            tauri::async_runtime::spawn(async move {
-                match summary::summary_engine::commands::init_model_manager_at_startup(&app_handle_for_model_manager).await {
-                    Ok(_) => log::info!("ModelManager initialized successfully at startup"),
-                    Err(e) => {
-                        log::warn!("Failed to initialize ModelManager at startup: {}", e);
-                        log::warn!("ModelManager will be lazy-initialized on first use");
+            if flags.builtin_ai_preload {
+                tauri::async_runtime::spawn(async move {
+                    match summary::summary_engine::commands::init_model_manager_at_startup(&app_handle_for_model_manager).await {
+                        Ok(_) => log::info!("ModelManager initialized successfully at startup"),
+                        Err(e) => {
+                            log::warn!("Failed to initialize ModelManager at startup: {}", e);
+                            log::warn!("ModelManager will be lazy-initialized on first use");
+                        }
                     }
-                }
-            });
+                });
+            }
 
             // Trigger system audio permission request on startup (similar to microphone permission)
             // #[cfg(target_os = "macos")]
