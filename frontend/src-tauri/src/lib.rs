@@ -68,6 +68,7 @@ pub mod utils;
 pub mod whisper_engine;
 pub mod key_registry;
 pub mod hotkey;
+pub mod appearance;
 pub mod meeting_domain;
 
 use audio::{list_audio_devices, AudioDevice, trigger_audio_permission};
@@ -616,6 +617,9 @@ pub fn run() {
             // Global hotkey for start/stop recording (default Cmd+Shift+R).
             hotkey::init(&_app.handle());
 
+            // Menu-bar-only / hide-Dock mode (#428) — apply persisted preference.
+            appearance::init(&_app.handle());
+
             // Atoll notch bridge — push meeting state to macOS notch
             atoll_bridge::setup_atoll_listener(&_app.handle());
 
@@ -771,6 +775,8 @@ pub fn run() {
             key_registry::registry_set_key,
             hotkey::get_recording_hotkey,
             hotkey::set_recording_hotkey,
+            appearance::get_dock_visibility,
+            appearance::set_dock_visibility,
             stop_recording,
             is_recording,
             get_transcription_status,
