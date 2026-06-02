@@ -37,6 +37,7 @@ pub(crate) use perf_trace;
 // Declare audio module
 pub mod analytics;
 pub mod api;
+pub mod atoll_bridge;
 pub mod audio;
 pub mod calendar;
 pub mod config;
@@ -46,6 +47,7 @@ pub mod diarization;
 pub mod dictionary;
 pub mod export;
 pub mod meeting_detect;
+pub mod memory_bridge;
 pub mod notifications;
 pub mod ollama;
 pub mod onboarding;
@@ -601,8 +603,15 @@ pub fn run() {
         .manage(dictionary::new_dictionary_state())
         .manage(Arc::new(tokio::sync::RwLock::new(diarization::DiarizationState::new(diarization::DiarizationConfig::default()))))
         .manage(audio::transcription::new_enhancement_state())
+        // Calendar + meeting-detection state (ICS subscription, Outlook/Google auto-record, app detection)
+        .manage(calendar::new_calendar_state())
+        .manage(Arc::new(RwLock::new(calendar::CalendarConfig::default())))
+        .manage(Arc::new(RwLock::new(meeting_detect::DetectionConfig::default())))
         .setup(|_app| {
             log::info!("Application setup complete");
+
+            // Atoll notch bridge — push meeting state to macOS notch
+            atoll_bridge::setup_atoll_listener(&_app.handle());
 
             // Load dictionary and start file watcher
             let dict_state = _app.state::<dictionary::DictionaryState>().inner().clone();
@@ -695,6 +704,12 @@ pub fn run() {
             //         }
             //     });
             // }
+
+            // Start calendar ICS poller (background sync of subscribed calendar feeds)
+            let cal_state = _app.state::<calendar::CalendarState>().inner().clone();
+            let cal_config = _app.state::<Arc<RwLock<calendar::CalendarConfig>>>().inner().clone();
+            calendar::scheduler::start_calendar_poller(cal_config, cal_state);
+            log::info!("📅 Calendar ICS poller started");
 
             // Initialize database (handles first launch detection and conditional setup)
             tauri::async_runtime::block_on(async {

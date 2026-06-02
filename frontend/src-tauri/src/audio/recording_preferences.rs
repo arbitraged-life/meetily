@@ -245,13 +245,39 @@ pub async fn open_recordings_folder<R: Runtime>(app: AppHandle<R>) -> Result<(),
 
 #[tauri::command]
 pub async fn select_recording_folder<R: Runtime>(
-    _app: AppHandle<R>,
+    app: AppHandle<R>,
 ) -> Result<Option<String>, String> {
-    // Use Tauri's dialog to select folder
-    // For now, return None - this would need to be implemented with tauri-plugin-dialog
-    // when it's available in the Cargo.toml
-    warn!("Folder selection not yet implemented - using dialog plugin");
-    Ok(None)
+    use tauri_plugin_dialog::DialogExt;
+
+    // Show a native folder picker. Run on a blocking task to avoid blocking the async runtime.
+    let app_clone = app.clone();
+    let folder = tokio::task::spawn_blocking(move || {
+        app_clone.dialog().file().blocking_pick_folder()
+    })
+    .await
+    .map_err(|e| format!("Folder dialog task failed: {}", e))?;
+
+    match folder {
+        Some(path) => {
+            let path_str = path.to_string();
+            info!("User selected recording folder: {}", path_str);
+
+            // Persist the new save folder into preferences so it survives restarts
+            // and is actually picked up by the recording saver.
+            let mut prefs = load_recording_preferences(&app).await.unwrap_or_default();
+            prefs.save_folder = PathBuf::from(&path_str);
+            if let Err(e) = set_recording_preferences(app.clone(), prefs).await {
+                error!("Failed to persist selected recording folder: {}", e);
+                return Err(format!("Failed to save folder preference: {}", e));
+            }
+
+            Ok(Some(path_str))
+        }
+        None => {
+            info!("User cancelled folder selection");
+            Ok(None)
+        }
+    }
 }
 
 // Backend selection commands

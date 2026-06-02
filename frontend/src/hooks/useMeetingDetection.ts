@@ -18,6 +18,11 @@ interface MeetingDetectionEvent {
   };
 }
 
+export interface PendingMeetingAction {
+  appName: string;
+  detectedAt: number;
+}
+
 interface UseMeetingDetectionOptions {
   onMeetingDetected?: (appName: string) => void;
   onMeetingEnded?: (appName: string) => void;
@@ -27,10 +32,12 @@ interface UseMeetingDetectionOptions {
 export function useMeetingDetection({
   onMeetingDetected,
   onMeetingEnded,
-  autoStartRecording = true,
+  autoStartRecording = false,
 }: UseMeetingDetectionOptions = {}) {
   const [isEnabled, setIsEnabled] = useState(false);
   const [detectedApp, setDetectedApp] = useState<string | null>(null);
+  const [pendingStart, setPendingStart] = useState<PendingMeetingAction | null>(null);
+  const [pendingStop, setPendingStop] = useState<PendingMeetingAction | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const enable = useCallback(async () => {
@@ -42,6 +49,37 @@ export function useMeetingDetection({
     await invoke("set_meeting_detection_enabled", { enabled: false });
     setIsEnabled(false);
     setDetectedApp(null);
+    setPendingStart(null);
+    setPendingStop(null);
+  }, []);
+
+  const confirmStart = useCallback(async () => {
+    if (!pendingStart) return;
+    const { appName } = pendingStart;
+    setPendingStart(null);
+    try {
+      await invoke("start_recording", { meetingName: `${appName} Meeting` });
+    } catch (err) {
+      console.error("start_recording failed:", err);
+    }
+  }, [pendingStart]);
+
+  const cancelStart = useCallback(() => {
+    setPendingStart(null);
+  }, []);
+
+  const confirmStop = useCallback(async () => {
+    if (!pendingStop) return;
+    setPendingStop(null);
+    try {
+      await invoke("stop_recording");
+    } catch (err) {
+      console.error("stop_recording failed:", err);
+    }
+  }, [pendingStop]);
+
+  const cancelStop = useCallback(() => {
+    setPendingStop(null);
   }, []);
 
   // Poll for events
@@ -67,13 +105,17 @@ export function useMeetingDetection({
             onMeetingDetected?.(appName);
 
             if (autoStartRecording) {
+              // Legacy direct mode (unused when AutoRecordPrompt is mounted)
               try {
-                await invoke("start_recording_with_meeting_name", {
+                await invoke("start_recording", {
                   meetingName: `${appName} Meeting`,
                 });
               } catch (err) {
                 console.error("Auto-start recording failed:", err);
               }
+            } else {
+              // Signal pending start — AutoRecordPrompt picks this up
+              setPendingStart({ appName, detectedAt: Date.now() });
             }
           }
 
@@ -81,6 +123,10 @@ export function useMeetingDetection({
             const appName = event.MeetingEnded.app_name;
             setDetectedApp(null);
             onMeetingEnded?.(appName);
+
+            if (!autoStartRecording) {
+              setPendingStop({ appName, detectedAt: Date.now() });
+            }
           }
         }
       } catch (err) {
@@ -99,7 +145,13 @@ export function useMeetingDetection({
   return {
     isEnabled,
     detectedApp,
+    pendingStart,
+    pendingStop,
     enable,
     disable,
+    confirmStart,
+    cancelStart,
+    confirmStop,
+    cancelStop,
   };
 }
