@@ -13,6 +13,13 @@ export interface OllamaModel {
   id: string;
   size: string;
   modified: string;
+  // Enrichment metadata from backend for the summarization model picker
+  size_bytes?: number;
+  params?: string;
+  speed?: string;      // "Fast" | "Balanced" | "Slow"
+  accuracy?: string;   // "Basic" | "Good" | "High"
+  fits_machine?: boolean;
+  recommended?: boolean;
 }
 
 export interface StorageLocations {

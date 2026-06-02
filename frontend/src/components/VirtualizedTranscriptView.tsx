@@ -25,6 +25,8 @@ export interface VirtualizedTranscriptViewProps {
     enableStreaming?: boolean;
     /** Show confidence indicators */
     showConfidence?: boolean;
+    /** Render original + AI-enhanced text side by side */
+    showEnhanced?: boolean;
     /** Completely disable auto-scroll behavior (for meeting details page) */
     disableAutoScroll?: boolean;
 
@@ -87,6 +89,10 @@ const TranscriptSegment = memo(function TranscriptSegment({
     showConfidence,
     speaker_id,
     speaker_label,
+    showEnhanced,
+    enhanced,
+    enhancedText,
+    enhancementProvider,
 }: {
     id: string;
     timestamp: number;
@@ -96,6 +102,10 @@ const TranscriptSegment = memo(function TranscriptSegment({
     showConfidence: boolean;
     speaker_id?: string;
     speaker_label?: string;
+    showEnhanced?: boolean;
+    enhanced?: boolean;
+    enhancedText?: string;
+    enhancementProvider?: string;
 }) {
     const displayText = cleanStopWords(text) || (text.trim() === '' ? '[Silence]' : text);
     const speakerColor = speaker_id ? getSpeakerColor(speaker_id) : '';
@@ -121,7 +131,30 @@ const TranscriptSegment = memo(function TranscriptSegment({
                             {speaker_label}
                         </span>
                     )}
-                    {isStreaming ? (
+                    {showEnhanced ? (
+                        // Side-by-side: raw transcription (left) | AI enhancement (right)
+                        <div className="grid grid-cols-2 gap-3">
+                            <div className={isStreaming ? "bg-gray-100 border border-gray-200 rounded-lg px-3 py-2" : ""}>
+                                <p className="text-[10px] uppercase tracking-wide text-gray-400 mb-1">Live</p>
+                                <p className="text-base text-gray-800 leading-relaxed">{displayText}</p>
+                            </div>
+                            <div className="bg-violet-50 border border-violet-100 rounded-lg px-3 py-2">
+                                <p className="text-[10px] uppercase tracking-wide text-violet-500 mb-1 flex items-center gap-1">
+                                    <span>✨ AI Enhanced</span>
+                                    {enhancementProvider && (
+                                        <span className="text-violet-300 normal-case">· {enhancementProvider}</span>
+                                    )}
+                                </p>
+                                {enhanced && enhancedText ? (
+                                    <p className="text-base text-gray-900 leading-relaxed">{enhancedText}</p>
+                                ) : (
+                                    <p className="text-base text-violet-300 italic leading-relaxed animate-pulse">
+                                        enhancing…
+                                    </p>
+                                )}
+                            </div>
+                        </div>
+                    ) : isStreaming ? (
                         <div className="bg-gray-100 border border-gray-200 rounded-lg px-3 py-2">
                             <p className="text-base text-gray-800 leading-relaxed">{displayText}</p>
                         </div>
@@ -142,6 +175,7 @@ export const VirtualizedTranscriptView: React.FC<VirtualizedTranscriptViewProps>
     isStopping = false,
     enableStreaming = false,
     showConfidence = true,
+    showEnhanced = false,
     disableAutoScroll = false,
     hasMore = false,
     isLoadingMore = false,
@@ -322,6 +356,10 @@ export const VirtualizedTranscriptView: React.FC<VirtualizedTranscriptViewProps>
                                         showConfidence={showConfidence}
                                         speaker_id={segment.speaker_id}
                                         speaker_label={segment.speaker_label}
+                                        showEnhanced={showEnhanced}
+                                        enhanced={segment.enhanced}
+                                        enhancedText={segment.enhancedText}
+                                        enhancementProvider={segment.enhancementProvider}
                                     />
                                 </div>
                             );
@@ -380,6 +418,10 @@ export const VirtualizedTranscriptView: React.FC<VirtualizedTranscriptViewProps>
                                         showConfidence={showConfidence}
                                         speaker_id={segment.speaker_id}
                                         speaker_label={segment.speaker_label}
+                                        showEnhanced={showEnhanced}
+                                        enhanced={segment.enhanced}
+                                        enhancedText={segment.enhancedText}
+                                        enhancementProvider={segment.enhancementProvider}
                                     />
                                 </motion.div>
                             );

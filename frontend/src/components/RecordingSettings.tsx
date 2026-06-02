@@ -21,7 +21,7 @@ interface RecordingSettingsProps {
 export function RecordingSettings({ onSave }: RecordingSettingsProps) {
   const [preferences, setPreferences] = useState<RecordingPreferences>({
     save_folder: '',
-    auto_save: true,
+    auto_save: false,
     file_format: 'mp4',
     preferred_mic_device: null,
     preferred_system_device: null
@@ -196,7 +196,9 @@ export function RecordingSettings({ onSave }: RecordingSettingsProps) {
                 try {
                   const newPath = await invoke<string>('select_recording_folder');
                   if (newPath) {
-                    setPreferences(prev => ({ ...prev, save_folder: newPath }));
+                    const newPreferences = { ...preferences, save_folder: newPath };
+                    setPreferences(newPreferences);
+                    await savePreferences(newPreferences);
                   }
                 } catch (error) {
                   console.error('Failed to select folder:', error);

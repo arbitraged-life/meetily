@@ -19,8 +19,9 @@ export interface Transcript {
   // Speaker diarization
   speaker_id?: string;
   speaker_label?: string;
-  // Enhancement (parallel cloud upgrade)
+  // Enhancement (parallel cloud upgrade) — shown SIDE BY SIDE, not in-place
   enhanced?: boolean;
+  enhanced_text?: string;        // Cloud-upgraded text; original `text` is preserved
   enhancement_provider?: string;
 }
 
@@ -128,4 +129,8 @@ export interface TranscriptSegmentData {
   confidence?: number;
   speaker_id?: string;
   speaker_label?: string;
+  // Parallel AI enhancement (rendered side-by-side with `text`)
+  enhanced?: boolean;
+  enhancedText?: string;
+  enhancementProvider?: string;
 }

@@ -3,7 +3,7 @@ import ScreenContextTimeline from '@/components/ScreenContextTimeline';
 import { PermissionWarning } from '@/components/PermissionWarning';
 import { Button } from '@/components/ui/button';
 import { ButtonGroup } from '@/components/ui/button-group';
-import { Copy, GlobeIcon, Tag } from 'lucide-react';
+import { Copy, GlobeIcon, Tag, Sparkles } from 'lucide-react';
 import { useTranscripts } from '@/contexts/TranscriptContext';
 import { useConfig } from '@/contexts/ConfigContext';
 import { useRecordingState } from '@/contexts/RecordingStateContext';
@@ -59,9 +59,26 @@ export function TranscriptPanel({
       confidence: t.confidence,
       speaker_id: t.speaker_id,
       speaker_label: t.speaker_label,
+      enhanced: t.enhanced,
+      enhancedText: t.enhanced_text,
+      enhancementProvider: t.enhancement_provider,
     })),
     [transcripts]
   );
+
+  // Side-by-side AI enhancement view: show original + enhanced columns.
+  // Auto-on once any enhancement arrives; user can still toggle it off.
+  const hasAnyEnhancement = useMemo(
+    () => transcripts.some(t => t.enhanced),
+    [transcripts]
+  );
+  const [showEnhanced, setShowEnhanced] = useState(false);
+  const userToggledEnhanced = useRef(false);
+  useEffect(() => {
+    if (hasAnyEnhancement && !userToggledEnhanced.current) {
+      setShowEnhanced(true);
+    }
+  }, [hasAnyEnhancement]);
 
   return (
     <div ref={transcriptContainerRef} className="w-full border-r border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 flex flex-col overflow-y-auto">
@@ -110,6 +127,22 @@ export function TranscriptPanel({
                     </span>
                   </Button>
                 }
+                {hasAnyEnhancement && (
+                  <Button
+                    variant={showEnhanced ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => {
+                      userToggledEnhanced.current = true;
+                      setShowEnhanced(v => !v);
+                    }}
+                    title="Toggle side-by-side AI enhancement"
+                  >
+                    <Sparkles />
+                    <span className='hidden md:inline'>
+                      AI
+                    </span>
+                  </Button>
+                )}
               </ButtonGroup>
             </div>
           </div>
@@ -131,7 +164,7 @@ export function TranscriptPanel({
       {/* Transcript content */}
       <div className="pb-20">
         <div className="flex justify-center">
-          <div className="w-2/3 max-w-[750px]">
+          <div className={showEnhanced ? "w-full max-w-[1400px]" : "w-2/3 max-w-[750px]"}>
             <MeetingNotesPanel
               isRecording={isRecording}
               recordingStartTime={recordingStartTime}
@@ -144,6 +177,7 @@ export function TranscriptPanel({
               isStopping={isStopping}
               enableStreaming={isRecording}
               showConfidence={true}
+              showEnhanced={showEnhanced}
             />
             <ScreenContextTimeline isRecording={isRecording} />
           </div>

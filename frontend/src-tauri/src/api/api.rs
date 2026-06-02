@@ -951,6 +951,10 @@ pub async fn api_save_transcript<R: Runtime>(
         );
     }
 
+    // Keep a copy of the raw transcript values for the memory bridge before
+    // they are consumed by the parse below.
+    let raw_transcripts_for_memory = transcripts.clone();
+
     // Convert serde_json::Value to TranscriptSegment
     let transcripts_to_save: Vec<TranscriptSegment> = transcripts
         .into_iter()
@@ -986,6 +990,15 @@ pub async fn api_save_transcript<R: Runtime>(
                 "Successfully saved transcript and created meeting with id: {}",
                 meeting_id
             );
+
+            // Push transcript into the centralized memory system (OpenMemory/mem0).
+            // Fire-and-forget: never blocks or fails the local save.
+            crate::memory_bridge::push_meeting_transcript(
+                meeting_id.clone(),
+                meeting_title.clone(),
+                raw_transcripts_for_memory,
+            );
+
             Ok(serde_json::json!({
                 "status": "success",
                 "message": "Transcript saved successfully",

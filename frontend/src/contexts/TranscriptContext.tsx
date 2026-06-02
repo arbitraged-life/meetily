@@ -373,7 +373,8 @@ export function TranscriptProvider({ children }: { children: ReactNode }) {
             if (t.sequence_id === enhancement.sequence_id) {
               return {
                 ...t,
-                text: enhancement.enhanced_text,
+                // Preserve original `text` — store enhancement alongside for side-by-side display
+                enhanced_text: enhancement.enhanced_text,
                 confidence: enhancement.confidence,
                 enhanced: true,
                 enhancement_provider: enhancement.provider,

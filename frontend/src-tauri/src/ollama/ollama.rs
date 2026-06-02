@@ -50,6 +50,136 @@ pub struct OllamaModel {
     pub id: String,
     pub size: String,
     pub modified: String,
+    // ---- enrichment for summarization model picker UI ----
+    /// Raw size in bytes (used for RAM-fit calculations)
+    #[serde(default)]
+    pub size_bytes: i64,
+    /// Parameter count label, e.g. "3.0B" or "—" when unknown
+    #[serde(default)]
+    pub params: String,
+    /// Inference speed tier: "Fast" | "Balanced" | "Slow"
+    #[serde(default)]
+    pub speed: String,
+    /// Output quality tier: "Basic" | "Good" | "High"
+    #[serde(default)]
+    pub accuracy: String,
+    /// Whether the model comfortably fits this machine's RAM
+    #[serde(default)]
+    pub fits_machine: bool,
+    /// True for the single best model suited to this machine
+    #[serde(default)]
+    pub recommended: bool,
+}
+
+/// Detect embedding-only models that cannot be used for summarization.
+/// These should never appear in the summary model picker.
+fn is_embedding_model(name: &str) -> bool {
+    let n = name.to_lowercase();
+    const EMBED_MARKERS: &[&str] = &[
+        "embed",          // nomic-embed-text, mxbai-embed-large, snowflake-arctic-embed
+        "bge-", "bge:",   // BAAI BGE family
+        "gte-", "gte:",   // GTE family
+        "minilm",         // all-minilm
+        "e5-", "e5:",     // intfloat E5 family
+    ];
+    EMBED_MARKERS.iter().any(|m| n.contains(m))
+}
+
+/// Parse parameter count (in billions) from a model tag like "llama3.1:8b"
+/// or "gemma2:2b-instruct-q4_K_S". Returns None when not derivable from the name.
+fn parse_param_billions(name: &str) -> Option<f64> {
+    static RE: Lazy<regex::Regex> =
+        Lazy::new(|| regex::Regex::new(r"(?i)(\d+(?:\.\d+)?)\s*b\b").expect("valid regex"));
+    for caps in RE.captures_iter(name) {
+        if let Some(v) = caps.get(1).and_then(|m| m.as_str().parse::<f64>().ok()) {
+            if (0.1..=2000.0).contains(&v) {
+                return Some(v);
+            }
+        }
+    }
+    None
+}
+
+/// Classify a model into (params_label, speed, accuracy) tiers.
+/// Uses parameter count when known, otherwise estimates from on-disk size.
+fn classify_model(params_b: Option<f64>, size_bytes: i64) -> (String, String, String) {
+    let gb = size_bytes as f64 / (1024.0 * 1024.0 * 1024.0);
+    // Fallback: roughly ~1.4B params per GB for common q4 quantizations.
+    let eff_b = params_b.unwrap_or(gb * 1.4);
+
+    let (speed, accuracy) = if eff_b <= 2.5 {
+        ("Fast", "Basic")
+    } else if eff_b <= 9.0 {
+        ("Balanced", "Good")
+    } else {
+        ("Slow", "High")
+    };
+
+    let label = match params_b {
+        Some(b) => {
+            // Trim trailing .0 for whole numbers.
+            if (b.fract()).abs() < f64::EPSILON {
+                format!("{}B", b as i64)
+            } else {
+                format!("{:.1}B", b)
+            }
+        }
+        None => "—".to_string(),
+    };
+
+    (label, speed.to_string(), accuracy.to_string())
+}
+
+/// Total system RAM in bytes (0 if undeterminable).
+fn get_total_ram_bytes() -> u64 {
+    use sysinfo::System;
+    let mut sys = System::new();
+    sys.refresh_memory();
+    sys.total_memory()
+}
+
+/// Remove embedding models and annotate the remainder with speed/accuracy/fit
+/// metadata plus a single machine-aware recommendation.
+fn enrich_and_filter(raw: Vec<OllamaModel>) -> Vec<OllamaModel> {
+    let total_ram = get_total_ram_bytes();
+    // Leave headroom for the OS, the app, and KV cache.
+    let budget = (total_ram as f64 * 0.7) as i64;
+
+    let mut models: Vec<OllamaModel> = raw
+        .into_iter()
+        .filter(|m| !is_embedding_model(&m.name))
+        .map(|mut m| {
+            let params = parse_param_billions(&m.name);
+            let (label, speed, accuracy) = classify_model(params, m.size_bytes);
+            m.params = label;
+            m.speed = speed;
+            m.accuracy = accuracy;
+            // Weights + runtime overhead ≈ 1.2x file size.
+            let ram_need = (m.size_bytes as f64 * 1.2) as i64;
+            m.fits_machine = total_ram == 0 || ram_need <= budget;
+            m.recommended = false;
+            m
+        })
+        .collect();
+
+    // Recommend the most capable (largest) model that still fits the machine.
+    let mut best_idx: Option<usize> = None;
+    let mut best_score = -1.0f64;
+    for (i, m) in models.iter().enumerate() {
+        if !m.fits_machine {
+            continue;
+        }
+        let score = m.size_bytes as f64;
+        if score > best_score {
+            best_score = score;
+            best_idx = Some(i);
+        }
+    }
+    if let Some(i) = best_idx {
+        models[i].recommended = true;
+    }
+
+    models
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -111,15 +241,17 @@ pub async fn get_ollama_models(endpoint: Option<String>) -> Result<Vec<OllamaMod
             if models.is_empty() {
                 Err(OllamaError::NoModelsFound.to_string())
             } else {
-                Ok(models)
+                Ok(enrich_and_filter(models))
             }
         }
         Ok(Err(http_err)) => {
             // Only fallback to CLI if endpoint is localhost/empty
             if is_localhost_endpoint(endpoint.as_deref()) {
-                get_models_via_cli().map_err(|cli_err| {
-                    format!("{}\n\nAlso tried CLI: {}", http_err, cli_err)
-                })
+                get_models_via_cli()
+                    .map(enrich_and_filter)
+                    .map_err(|cli_err| {
+                        format!("{}\n\nAlso tried CLI: {}", http_err, cli_err)
+                    })
             } else {
                 Err(http_err)
             }
@@ -194,6 +326,12 @@ async fn get_models_via_http_async(endpoint: Option<&str>) -> Result<Vec<OllamaM
         id: m.model,
         size: format_size(m.size),
         modified: m.modified_at,
+        size_bytes: m.size,
+        params: String::new(),
+        speed: String::new(),
+        accuracy: String::new(),
+        fits_machine: false,
+        recommended: false,
     }).collect())
 }
 
@@ -221,11 +359,18 @@ fn get_models_via_cli() -> Result<Vec<OllamaModel>, String> {
     for line in output_str.lines().skip(1) {
         let parts: Vec<&str> = line.split_whitespace().collect();
         if parts.len() >= 4 {
+            let size_bytes = parse_human_size(parts[2], parts[3]);
             models.push(OllamaModel {
                 name: parts[0].to_string(),
                 id: parts[1].to_string(),
                 size: format!("{} {}", parts[2], parts[3]),
                 modified: parts[4..].join(" "),
+                size_bytes,
+                params: String::new(),
+                speed: String::new(),
+                accuracy: String::new(),
+                fits_machine: false,
+                recommended: false,
             });
         }
     }
@@ -247,6 +392,20 @@ fn format_size(size: i64) -> String {
     } else {
         format!("{:.1} GB", size as f64 / (1024.0 * 1024.0 * 1024.0))
     }
+}
+
+/// Parse a human-readable size from `ollama list` output, e.g. ("3.1", "GB") -> bytes.
+fn parse_human_size(num: &str, unit: &str) -> i64 {
+    let val: f64 = num.parse().unwrap_or(0.0);
+    let mult = match unit.to_uppercase().as_str() {
+        "B" => 1.0,
+        "KB" => 1024.0,
+        "MB" => 1024.0 * 1024.0,
+        "GB" => 1024.0 * 1024.0 * 1024.0,
+        "TB" => 1024.0 * 1024.0 * 1024.0 * 1024.0,
+        _ => 1.0,
+    };
+    (val * mult) as i64
 }
 
 #[derive(Debug, Serialize, Deserialize)]

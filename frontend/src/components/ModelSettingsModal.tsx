@@ -50,6 +50,12 @@ interface OllamaModel {
   id: string;
   size: string;
   modified: string;
+  size_bytes?: number;
+  params?: string;
+  speed?: string;
+  accuracy?: string;
+  fits_machine?: boolean;
+  recommended?: boolean;
 }
 
 interface OpenRouterModel {
@@ -794,19 +800,29 @@ export function ModelSettingsModal({
   }, [downloadingModels]);
 
   // Filter Ollama models based on search query
-  const filteredModels = models.filter((model) => {
-    if (!searchQuery.trim()) return true;
+  const filteredModels = models
+    .filter((model) => {
+      if (!searchQuery.trim()) return true;
 
-    const query = searchQuery.toLowerCase();
-    const isLoaded = modelConfig.model === model.name;
-    const loadedText = isLoaded ? 'loaded' : '';
+      const query = searchQuery.toLowerCase();
+      const isLoaded = modelConfig.model === model.name;
+      const loadedText = isLoaded ? 'loaded' : '';
 
-    return (
-      model.name.toLowerCase().includes(query) ||
-      model.size.toLowerCase().includes(query) ||
-      loadedText.includes(query)
-    );
-  });
+      return (
+        model.name.toLowerCase().includes(query) ||
+        model.size.toLowerCase().includes(query) ||
+        loadedText.includes(query)
+      );
+    })
+    // Surface the machine-recommended model first, then models that fit, then the rest.
+    .sort((a, b) => {
+      const rank = (m: OllamaModel) =>
+        m.recommended ? 0 : m.fits_machine === false ? 2 : 1;
+      const diff = rank(a) - rank(b);
+      if (diff !== 0) return diff;
+      // Within the same tier, larger (more capable) models first.
+      return (b.size_bytes ?? 0) - (a.size_bytes ?? 0);
+    });
 
   return (
     <div>
@@ -1335,11 +1351,52 @@ export function ModelSettingsModal({
                             }
                           }}
                         >
-                          <div>
+                          <div className="flex items-center flex-wrap gap-2">
                             <b className="font-bold">{model.name}&nbsp;</b>
                             <span className="text-muted-foreground">with a size of </span>
                             <span className="font-mono font-bold text-sm">{model.size}</span>
+                            {model.recommended && (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300 border border-green-300 dark:border-green-700">
+                                ★ Best for your machine
+                              </span>
+                            )}
+                            {model.fits_machine === false && (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 border border-amber-300 dark:border-amber-700" title="This model may exceed your available RAM and run slowly.">
+                                ⚠ May exceed RAM
+                              </span>
+                            )}
                           </div>
+
+                          {/* Speed / accuracy / params guidance */}
+                          {(model.speed || model.accuracy || (model.params && model.params !== '—')) && (
+                            <div className="mt-1.5 flex items-center flex-wrap gap-3 text-[11px] text-muted-foreground">
+                              {model.params && model.params !== '—' && (
+                                <span className="font-mono">{model.params} params</span>
+                              )}
+                              {model.speed && (
+                                <span className="inline-flex items-center gap-1">
+                                  <span className="text-muted-foreground/70">Speed:</span>
+                                  <span className={cn(
+                                    'font-semibold',
+                                    model.speed === 'Fast' && 'text-green-600 dark:text-green-400',
+                                    model.speed === 'Balanced' && 'text-blue-600 dark:text-blue-400',
+                                    model.speed === 'Slow' && 'text-orange-600 dark:text-orange-400',
+                                  )}>{model.speed}</span>
+                                </span>
+                              )}
+                              {model.accuracy && (
+                                <span className="inline-flex items-center gap-1">
+                                  <span className="text-muted-foreground/70">Accuracy:</span>
+                                  <span className={cn(
+                                    'font-semibold',
+                                    model.accuracy === 'Basic' && 'text-muted-foreground',
+                                    model.accuracy === 'Good' && 'text-blue-600 dark:text-blue-400',
+                                    model.accuracy === 'High' && 'text-purple-600 dark:text-purple-400',
+                                  )}>{model.accuracy}</span>
+                                </span>
+                              )}
+                            </div>
+                          )}
 
                           {/* Progress bar for downloading models */}
                           {modelIsDownloading && progress !== undefined && (

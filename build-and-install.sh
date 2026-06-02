@@ -33,9 +33,30 @@ codesign --force --sign - "$APP_BUNDLE/Contents/MacOS/ffmpeg"
 codesign --force --sign - "$APP_BUNDLE/Contents/MacOS/meetily"
 codesign --force --sign - "$APP_BUNDLE"
 
-echo "📲 Installing to /Applications..."
-rm -rf "$INSTALL_DIR"
-cp -R "$APP_BUNDLE" "$INSTALL_DIR"
+echo "📲 Installing..."
+# Prefer /Applications, but fall back to ~/Applications if it's not writable
+# (e.g. a prior install left a root-owned bundle there and we have no sudo).
+install_app() {
+  local dest="$1"
+  rm -rf "$dest" 2>/dev/null || return 1
+  cp -R "$APP_BUNDLE" "$dest" 2>/dev/null || return 1
+  codesign --force --deep --sign - "$dest" 2>/dev/null
+  return 0
+}
+if install_app "$INSTALL_DIR"; then
+  echo "   → installed to $INSTALL_DIR"
+else
+  USER_INSTALL_DIR="$HOME/Applications/Meetily.app"
+  mkdir -p "$HOME/Applications"
+  if install_app "$USER_INSTALL_DIR"; then
+    echo "   ⚠️  /Applications not writable (root-owned bundle?) — installed to $USER_INSTALL_DIR instead"
+    echo "      To put it back in /Applications, run:"
+    echo "      sudo rm -rf \"$INSTALL_DIR\" && sudo cp -R \"$APP_BUNDLE\" \"$INSTALL_DIR\" && sudo chown -R \"$(whoami):staff\" \"$INSTALL_DIR\""
+  else
+    echo "   ❌ Failed to install to both /Applications and ~/Applications" >&2
+    exit 1
+  fi
+fi
 
 echo "🔧 Installing MCP server..."
 cd "$REPO_DIR"
