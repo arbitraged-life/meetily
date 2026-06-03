@@ -6,7 +6,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{anyhow, Result};
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use std::sync::RwLock;
@@ -22,6 +22,7 @@ use super::sidecar::SidecarManager;
 
 #[derive(Debug, Serialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
+#[allow(dead_code)] // scaffolding for sidecar summary engine
 enum Request {
     Generate {
         prompt: String,
@@ -38,6 +39,7 @@ enum Request {
 
 #[derive(Debug, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
+#[allow(dead_code)] // scaffolding for sidecar summary engine
 enum Response {
     Response { text: String, error: Option<String> },
     Error { message: String },
@@ -52,6 +54,7 @@ lazy_static::lazy_static! {
 }
 
 // Model path cache to avoid repeated filesystem I/O and model lookups
+#[allow(dead_code)] // used by get_cached_model_path (sidecar scaffolding)
 static MODEL_PATH_CACHE: Lazy<RwLock<HashMap<String, PathBuf>>> = Lazy::new(|| {
     RwLock::new(HashMap::new())
 });
@@ -73,6 +76,7 @@ async fn get_sidecar_manager() -> Result<Arc<SidecarManager>> {
 }
 
 /// Get cached model path with read-through caching to avoid repeated filesystem I/O
+#[allow(dead_code)] // sidecar summary engine scaffolding
 fn get_cached_model_path(app_data_dir: &PathBuf, model_name: &str) -> Result<PathBuf> {
     // Try read lock first (fast path for cache hits)
     {
@@ -127,7 +131,7 @@ fn get_cached_model_path(app_data_dir: &PathBuf, model_name: &str) -> Result<Pat
 /// # Returns
 /// Generated text
 pub async fn generate_with_builtin(
-    app_data_dir: &PathBuf,
+    _app_data_dir: &PathBuf,
     model_name: &str,
     system_prompt: &str,
     user_prompt: &str,

@@ -1,6 +1,6 @@
 // Speaker clustering — assigns segments to speakers using embeddings
 
-use super::{Speaker, DiarizedSegment};
+use super::Speaker;
 use super::embeddings::EmbeddingExtractor;
 use log::info;
 use uuid::Uuid;

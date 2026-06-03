@@ -2,7 +2,7 @@
 
 use super::CalendarEvent;
 use chrono::{DateTime, NaiveDateTime, TimeZone, Utc};
-use log::{error, info, warn};
+use log::info;
 use regex::Regex;
 
 /// Fetch and parse an ICS URL into calendar events

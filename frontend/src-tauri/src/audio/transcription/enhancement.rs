@@ -11,7 +11,6 @@
 //
 // The frontend merges enhancements into the transcript by matching sequence_id.
 
-use crate::audio::AudioChunk;
 use log::{error, info, warn};
 use serde::{Deserialize, Serialize};
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
@@ -139,7 +138,7 @@ pub fn start_enhancement_pipeline<R: Runtime>(
     let (sender, receiver) = mpsc::unbounded_channel::<EnhancementRequest>();
 
     let max_concurrent = config.max_concurrent;
-    let provider_name = config.provider.clone();
+    let _provider_name = config.provider.clone();
 
     tokio::spawn(async move {
         info!(

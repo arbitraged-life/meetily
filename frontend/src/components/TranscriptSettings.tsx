@@ -8,6 +8,7 @@ import { Eye, EyeOff, Lock, Unlock } from 'lucide-react';
 import { ModelManager } from './WhisperModelManager';
 import { ParakeetModelManager } from './ParakeetModelManager';
 import { MeetingDomainSettings } from './MeetingDomainSettings';
+import { DictionarySettings } from './DictionarySettings';
 
 
 export interface TranscriptModelProps {
@@ -186,6 +187,10 @@ export function TranscriptSettings({ transcriptModelConfig, setTranscriptModelCo
                             <MeetingDomainSettings />
                         </div>
                     )}
+
+                    <div className="mt-6">
+                        <DictionarySettings />
+                    </div>
 
 
                     {requiresApiKey && (

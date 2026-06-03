@@ -29,8 +29,6 @@ macro_rules! perf_trace {
 }
 
 // Make these macros available to other modules
-pub(crate) use perf_debug;
-pub(crate) use perf_trace;
 
 // Re-export async logging macros for external use (removed due to macro conflicts)
 
@@ -629,7 +627,7 @@ pub fn run() {
 
             // Initialize feature flags FIRST — everything else gates on these
             feature_flags::system_mute::ensure_unmuted_on_startup();
-            let ff_state = _app.state::<feature_flags::FeatureFlagState>().inner().clone();
+            let ff_state = _app.state::<feature_flags::FeatureFlagState>().inner();
             let ff_app = _app.handle().clone();
             tauri::async_runtime::block_on(async { ff_state.load(&ff_app).await });
             let flags = tauri::async_runtime::block_on(async { ff_state.flags.read().await.clone() });

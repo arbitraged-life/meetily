@@ -1,7 +1,7 @@
 //! Tauri commands for feature flag management
 
 use super::{FeatureFlagState, FeatureFlags};
-use tauri::{AppHandle, Manager, Runtime, State};
+use tauri::{AppHandle, Runtime, State};
 
 #[tauri::command]
 pub async fn get_feature_flags(

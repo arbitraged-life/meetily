@@ -41,6 +41,9 @@ default = ["platform-default"]  # Automatically enables best backend per platfor
 # Platform-appropriate defaults - see target-specific dependencies below
 platform-default = []
 
+# macOS native Apple Speech recognition backend (opt-in)
+apple-speech = []
+
 # Manual GPU acceleration options (for power users to override defaults)
 metal = ["whisper-rs/metal"]       # macOS: Apple Metal GPU (Auto-enabled on macOS)
 coreml = ["whisper-rs/coreml"]     # macOS: Apple CoreML acceleration
@@ -51,6 +54,12 @@ hipblas = ["whisper-rs/hipblas"]   # Linux: AMD ROCm HIP
 # CPU optimizations (fallback for systems without GPU)
 openblas = ["whisper-rs/openblas"] # Optimized BLAS (Auto-enabled on Windows/Linux)
 openmp = ["whisper-rs/openmp"]     # OpenMP parallel processing
+
+[lints.rust]
+# The objc `msg_send!` macro internally emits `cfg(cargo-clippy)`/`cfg(...)`
+# checks that rustc's check-cfg lint flags as unexpected. These are third-party
+# macro internals, not our config, so silence the false positives.
+unexpected_cfgs = { level = "allow" }
 
 [build-dependencies]
 tauri-build = { version = "2.3.0", features = [] }
@@ -227,7 +236,3 @@ memory-stats = "1.0"
 strsim = "0.10.0"
 futures = "0.3.31"
 tracing-subscriber = "0.3.16"
-
-[patch.crates-io]
-cpal = { git = "https://github.com/RustAudio/cpal", rev = "51c3b43" }
-esaxx-rs = { git = "https://github.com/thewh1teagle/esaxx-rs.git", branch = "feat/dynamic-msvc-link" }

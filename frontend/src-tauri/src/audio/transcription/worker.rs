@@ -78,15 +78,17 @@ pub fn start_transcription_task<R: Runtime>(
 
         info!("📊 Starting {} transcription worker{} (serial mode for ordered emission)", NUM_WORKERS, if NUM_WORKERS == 1 { "" } else { "s" });
 
+        // Build the fallback engine chain ONCE from already-loaded local
+        // engines. Cloned into each worker below so a transient primary failure
+        // retries on another engine instead of dropping the chunk.
+        let fallback_engines =
+            super::engine::build_fallback_engines(&transcription_engine).await;
+
         // Spawn worker tasks
         let mut worker_handles = Vec::new();
         for worker_id in 0..NUM_WORKERS {
-            let engine_clone = match &transcription_engine {
-                TranscriptionEngine::Whisper(e) => TranscriptionEngine::Whisper(e.clone()),
-                TranscriptionEngine::Parakeet(e) => TranscriptionEngine::Parakeet(e.clone()),
-                TranscriptionEngine::Provider(p) => TranscriptionEngine::Provider(p.clone()),
-            };
-            let app_clone = app.clone();
+            let engine_clone = transcription_engine.clone();
+            let fallback_engines_clone = fallback_engines.clone();
             let work_receiver_clone = work_receiver.clone();
             let chunks_completed_clone = chunks_completed.clone();
             let input_finished_clone = input_finished.clone();
@@ -159,20 +161,21 @@ pub fn start_transcription_task<R: Runtime>(
                                 chunk.data.clone()
                             };
 
-                            // Transcribe with provider-agnostic approach
+                            // Transcribe with provider-agnostic approach (with fallback)
                             match transcribe_chunk_with_provider(
                                 &engine_clone,
+                                &fallback_engines_clone,
                                 chunk,
                                 &app_clone,
                             )
                             .await
                             {
-                                Ok((transcript, confidence_opt, is_partial)) => {
-                                    // Provider-aware confidence threshold
-                                    let confidence_threshold = match &engine_clone {
-                                        TranscriptionEngine::Whisper(_) | TranscriptionEngine::Provider(_) => 0.3,
-                                        TranscriptionEngine::Parakeet(_) => 0.0, // Parakeet has no confidence, accept all
-                                    };
+                                Ok((transcript, confidence_opt, is_partial, confidence_threshold)) => {
+                                    // Confidence threshold belongs to whichever
+                                    // engine actually produced this transcript
+                                    // (primary or a fallback), returned alongside
+                                    // the result so we never grade a fallback's
+                                    // output against the primary engine's bar.
 
                                     let confidence_str = match confidence_opt {
                                         Some(c) => format!("{:.2}", c),
@@ -505,13 +508,30 @@ pub fn start_transcription_task<R: Runtime>(
     })
 }
 
-/// Transcribe audio chunk using the appropriate provider (Whisper, Parakeet, or trait-based)
-/// Returns: (text, confidence Option, is_partial)
+/// Minimum confidence to accept a transcript, per engine family. Parakeet
+/// reports no confidence, so all of its output is accepted (0.0); Whisper and
+/// generic providers gate at 0.3. Exposed so callers can apply the threshold of
+/// whichever engine actually produced a result (which may be a fallback, not
+/// the primary) rather than assuming the primary's threshold.
+fn confidence_threshold(engine: &TranscriptionEngine) -> f32 {
+    match engine {
+        TranscriptionEngine::Whisper(_) | TranscriptionEngine::Provider(_) => 0.3,
+        TranscriptionEngine::Parakeet(_) => 0.0,
+    }
+}
+
+/// Transcribe audio chunk using the primary provider, falling back to other
+/// loaded engines on failure before giving up.
+/// Returns: (text, confidence Option, is_partial, confidence_threshold) where
+/// the threshold belongs to the engine that actually produced the transcript
+/// (primary or fallback), so downstream gating is never graded against the
+/// wrong engine's bar.
 async fn transcribe_chunk_with_provider<R: Runtime>(
     engine: &TranscriptionEngine,
+    fallbacks: &[TranscriptionEngine],
     chunk: AudioChunk,
     app: &AppHandle<R>,
-) -> std::result::Result<(String, Option<f32>, bool), TranscriptionError> {
+) -> std::result::Result<(String, Option<f32>, bool, f32), TranscriptionError> {
     // Convert to 16kHz mono for transcription
     let transcription_data = if chunk.sample_rate != 16000 {
         crate::audio::audio_processing::resample_audio(&chunk.data, chunk.sample_rate, 16000)
@@ -544,10 +564,117 @@ async fn transcribe_chunk_with_provider<R: Runtime>(
         energy
     );
 
-    // Transcribe using the appropriate engine (with improved error handling)
+    // Try the primary engine first, then each fallback engine in order.
+    // Each attempt gets its own clone of the audio samples since transcription
+    // consumes them. Errors are only surfaced to the UI after every engine has
+    // failed, so a transient primary failure no longer drops the chunk.
+    let chunk_id = chunk.chunk_id;
+    let primary_name = engine.provider_name().to_string();
+
+    // Fast path: no fallback engines loaded. Move the (potentially large) audio
+    // buffer straight into the primary attempt — no clone on the hot path — and
+    // return its result (or surface the error) directly.
+    if fallbacks.is_empty() {
+        return match run_single_engine(engine, speech_samples, chunk_id).await {
+            Ok((text, conf, partial)) => {
+                Ok((text, conf, partial, confidence_threshold(engine)))
+            }
+            Err(primary_err) => {
+                error!(
+                    "{} transcription failed for chunk {} (no fallback engines): {}",
+                    primary_name, chunk_id, primary_err
+                );
+                let _ = app.emit(
+                    "transcription-error",
+                    &serde_json::json!({
+                        "error": primary_err.to_string(),
+                        "userMessage": format!("Transcription failed: {}", primary_err),
+                        "actionable": false
+                    }),
+                );
+                Err(primary_err)
+            }
+        };
+    }
+
+    // Fallbacks exist: keep `speech_samples` intact for them and hand the
+    // primary attempt its own clone.
+    match run_single_engine(engine, speech_samples.clone(), chunk_id).await {
+        Ok((text, conf, partial)) => return Ok((text, conf, partial, confidence_threshold(engine))),
+        Err(primary_err) => {
+            warn!(
+                "⚠️ {} failed for chunk {} ({}). Trying {} fallback engine(s)...",
+                primary_name,
+                chunk_id,
+                primary_err,
+                fallbacks.len()
+            );
+
+            let mut last_err = primary_err;
+            for fb in fallbacks {
+                let fb_name = fb.provider_name().to_string();
+                match run_single_engine(fb, speech_samples.clone(), chunk_id).await {
+                    Ok((text, conf, partial)) => {
+                        info!(
+                            "✅ Fallback engine '{}' recovered chunk {} after '{}' failed",
+                            fb_name, chunk_id, primary_name
+                        );
+                        // Notify UI that a fallback engine took over (non-fatal, informational).
+                        let _ = app.emit(
+                            "transcription-fallback-used",
+                            &serde_json::json!({
+                                "chunkId": chunk_id,
+                                "primary": primary_name,
+                                "fallback": fb_name,
+                            }),
+                        );
+                        // Grade the result against the FALLBACK engine's
+                        // threshold — not the primary's — so e.g. a Whisper
+                        // fallback under a Parakeet primary isn't waved through
+                        // (or wrongly rejected) by the wrong engine's bar.
+                        return Ok((text, conf, partial, confidence_threshold(fb)));
+                    }
+                    Err(e) => {
+                        warn!(
+                            "⚠️ Fallback engine '{}' also failed for chunk {}: {}",
+                            fb_name, chunk_id, e
+                        );
+                        last_err = e;
+                    }
+                }
+            }
+
+            // All engines (primary + fallbacks) failed.
+            error!(
+                "All transcription engines failed for chunk {} (last error: {})",
+                chunk_id, last_err
+            );
+            let _ = app.emit(
+                "transcription-error",
+                &serde_json::json!({
+                    "error": last_err.to_string(),
+                    "userMessage": format!(
+                        "Transcription failed on all engines: {}",
+                        last_err
+                    ),
+                    "actionable": false
+                }),
+            );
+            Err(last_err)
+        }
+    }
+}
+
+/// Run a single transcription engine against audio samples without emitting any
+/// UI events. Returns `(text, confidence, is_partial)` on success. Used by the
+/// fallback orchestrator so that errors can be aggregated across engines.
+async fn run_single_engine(
+    engine: &TranscriptionEngine,
+    speech_samples: Vec<f32>,
+    chunk_id: u64,
+) -> std::result::Result<(String, Option<f32>, bool), TranscriptionError> {
     match engine {
         TranscriptionEngine::Whisper(whisper_engine) => {
-            // Get language preference from global state
             let language = crate::get_language_preference_internal();
             let initial_prompt = crate::current_meeting_domain_prompt();
 
@@ -563,29 +690,12 @@ async fn transcribe_chunk_with_provider<R: Runtime>(
 
                     info!(
                         "Whisper transcription complete for chunk {}: '{}' (confidence: {:.2}, partial: {})",
-                        chunk.chunk_id, cleaned_text, confidence, is_partial
+                        chunk_id, cleaned_text, confidence, is_partial
                     );
 
                     Ok((cleaned_text, Some(confidence), is_partial))
                 }
-                Err(e) => {
-                    error!(
-                        "Whisper transcription failed for chunk {}: {}",
-                        chunk.chunk_id, e
-                    );
-
-                    let transcription_error = TranscriptionError::EngineFailed(e.to_string());
-                    let _ = app.emit(
-                        "transcription-error",
-                        &serde_json::json!({
-                            "error": transcription_error.to_string(),
-                            "userMessage": format!("Transcription failed: {}", transcription_error),
-                            "actionable": false
-                        }),
-                    );
-
-                    Err(transcription_error)
-                }
+                Err(e) => Err(TranscriptionError::EngineFailed(e.to_string())),
             }
         }
         TranscriptionEngine::Parakeet(parakeet_engine) => {
@@ -598,34 +708,16 @@ async fn transcribe_chunk_with_provider<R: Runtime>(
 
                     info!(
                         "Parakeet transcription complete for chunk {}: '{}'",
-                        chunk.chunk_id, cleaned_text
+                        chunk_id, cleaned_text
                     );
 
                     // Parakeet doesn't provide confidence or partial results
                     Ok((cleaned_text, None, false))
                 }
-                Err(e) => {
-                    error!(
-                        "Parakeet transcription failed for chunk {}: {}",
-                        chunk.chunk_id, e
-                    );
-
-                    let transcription_error = TranscriptionError::EngineFailed(e.to_string());
-                    let _ = app.emit(
-                        "transcription-error",
-                        &serde_json::json!({
-                            "error": transcription_error.to_string(),
-                            "userMessage": format!("Transcription failed: {}", transcription_error),
-                            "actionable": false
-                        }),
-                    );
-
-                    Err(transcription_error)
-                }
+                Err(e) => Err(TranscriptionError::EngineFailed(e.to_string())),
             }
         }
         TranscriptionEngine::Provider(provider) => {
-            // NEW: Trait-based provider (clean, unified interface)
             let language = crate::get_language_preference_internal();
 
             match provider.transcribe(speech_samples, language).await {
@@ -643,7 +735,7 @@ async fn transcribe_chunk_with_provider<R: Runtime>(
                     info!(
                         "{} transcription complete for chunk {}: '{}' ({}, partial: {})",
                         provider.provider_name(),
-                        chunk.chunk_id,
+                        chunk_id,
                         cleaned_text,
                         confidence_str,
                         result.is_partial
@@ -651,25 +743,7 @@ async fn transcribe_chunk_with_provider<R: Runtime>(
 
                     Ok((cleaned_text, result.confidence, result.is_partial))
                 }
-                Err(e) => {
-                    error!(
-                        "{} transcription failed for chunk {}: {}",
-                        provider.provider_name(),
-                        chunk.chunk_id,
-                        e
-                    );
-
-                    let _ = app.emit(
-                        "transcription-error",
-                        &serde_json::json!({
-                            "error": e.to_string(),
-                            "userMessage": format!("Transcription failed: {}", e),
-                            "actionable": false
-                        }),
-                    );
-
-                    Err(e)
-                }
+                Err(e) => Err(e),
             }
         }
     }
