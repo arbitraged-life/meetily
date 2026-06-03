@@ -47,7 +47,9 @@ export function TranscriptSettings({ transcriptModelConfig, setTranscriptModelCo
                 return activeProvider;
             });
         } catch {
+            console.error(`Failed to check registry for provider ${provider}`);
             setActiveRegistryCheck((activeProvider) => activeProvider === provider ? null : activeProvider);
+            setRegistryDetected(false);
         }
     };
 

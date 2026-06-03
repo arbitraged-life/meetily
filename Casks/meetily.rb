@@ -11,7 +11,7 @@ cask "meetily" do
   # Only Apple Silicon builds are published.
   depends_on arch: :arm64
   # Built with MACOSX_DEPLOYMENT_TARGET=14.2, requires Sonoma 14.2+
-  depends_on macos: ">= :sonoma"
+  depends_on macos: ">= :sonoma_14_2"
   app "Meetily.app"
   zap trash: [
     "~/Library/Application Support/com.meetily.ai",
