@@ -138,7 +138,8 @@ pub async fn present_meeting(title: &str, subtitle: &str, _style: &str) {
 
 /// Update an active meeting experience in the notch
 pub async fn update_meeting(title: &str, subtitle: &str) {
-    if ensure_authorized().await.is_err() {
+    if let Err(e) = ensure_authorized().await {
+        debug!("Atoll bridge: auth failed: {} (Atoll may not be running)", e);
         return;
     }
     let descriptor = meeting_descriptor(&format!("🔴 {}", title), subtitle);

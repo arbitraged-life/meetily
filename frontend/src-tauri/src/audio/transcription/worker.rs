@@ -88,8 +88,7 @@ pub fn start_transcription_task<R: Runtime>(
         let mut worker_handles = Vec::new();
         for worker_id in 0..NUM_WORKERS {
             let engine_clone = transcription_engine.clone();
-            let fallback_engines_clone: Vec<TranscriptionEngine> =
-                fallback_engines.iter().map(|e| e.clone()).collect();
+            let fallback_engines_clone = fallback_engines.clone();
             let app_clone = app.clone();
             let work_receiver_clone = work_receiver.clone();
             let chunks_completed_clone = chunks_completed.clone();
