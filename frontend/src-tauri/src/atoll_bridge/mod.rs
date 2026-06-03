@@ -54,11 +54,13 @@ async fn rpc_call(method: &str, params: Value) -> Result<Value, String> {
 
     // Read frames until we get the response matching our request id. Any
     // server-initiated notification (no id / mismatched id) is skipped rather
-    // than consumed as our reply. A read timeout prevents an unresponsive Atoll
-    // from hanging the spawned task indefinitely.
+    // than consumed as our reply. A single per-REQUEST deadline (not per-frame)
+    // bounds the total wait, so a steady stream of unrelated notifications can't
+    // keep resetting the timeout and hang the spawned task indefinitely.
     const RPC_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(5);
+    let deadline = tokio::time::Instant::now() + RPC_TIMEOUT;
     let reply = loop {
-        let frame = tokio::time::timeout(RPC_TIMEOUT, ws.next())
+        let frame = tokio::time::timeout_at(deadline, ws.next())
             .await
             .map_err(|_| "Atoll RPC timed out waiting for reply".to_string())?;
         match frame {
