@@ -44,6 +44,8 @@ export function DeviceSelection({ selectedDevices, onDeviceChange, disabled = fa
   const [refreshing, setRefreshing] = useState(false);
   const [audioLevels, setAudioLevels] = useState<Map<string, AudioLevelData>>(new Map());
   const [isMonitoring, setIsMonitoring] = useState(false);
+  const [autoPicking, setAutoPicking] = useState(false);
+  const [autoPickMsg, setAutoPickMsg] = useState<string | null>(null);
 
   // Filter devices by type
   const inputDevices = devices.filter(device => device.device_type === 'Input');
@@ -109,6 +111,30 @@ export function DeviceSelection({ selectedDevices, onDeviceChange, disabled = fa
   const handleRefresh = async () => {
     setRefreshing(true);
     await fetchDevices();
+  };
+
+  // Auto-pick the loudest microphone by probing input levels (#514)
+  const handleAutoPickMic = async () => {
+    try {
+      setAutoPicking(true);
+      setAutoPickMsg(null);
+      setError(null);
+      const result = await invoke<{ best: string | null; ranked: { device_name: string; mean_rms: number }[] }>(
+        'auto_select_microphone'
+      );
+      if (result.best) {
+        // Match the SelectItem value format: "<name> (input)"
+        handleMicDeviceChange(`${result.best} (input)`);
+        setAutoPickMsg(`Selected "${result.best}" (loudest of ${result.ranked.length} mic${result.ranked.length === 1 ? '' : 's'})`);
+      } else {
+        setAutoPickMsg('No microphone produced a usable signal — speak and try again, or pick manually.');
+      }
+    } catch (err) {
+      console.error('Auto-pick microphone failed:', err);
+      setError('Failed to auto-pick microphone. Please select one manually.');
+    } finally {
+      setAutoPicking(false);
+    }
   };
 
   // Helper function to detect device category and Bluetooth status
@@ -229,6 +255,14 @@ export function DeviceSelection({ selectedDevices, onDeviceChange, disabled = fa
         <h4 className="text-sm font-medium text-gray-900">Audio Devices</h4>
         <div className="flex items-center space-x-2">
           <button
+            onClick={handleAutoPickMic}
+            disabled={disabled || autoPicking || isMonitoring || inputDevices.length === 0}
+            className="px-3 py-1.5 text-xs font-medium rounded-md transition-colors border bg-emerald-500 text-white hover:bg-emerald-600 border-emerald-500 disabled:pointer-events-none disabled:opacity-50"
+            title={inputDevices.length === 0 ? 'No microphones available' : 'Probe all mics (~1s) and pick the loudest'}
+          >
+            {autoPicking ? 'Listening…' : 'Auto-pick'}
+          </button>
+          <button
             onClick={toggleAudioLevelMonitoring}
             disabled={disabled || inputDevices.length === 0}
             className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors border ${
@@ -287,6 +321,11 @@ export function DeviceSelection({ selectedDevices, onDeviceChange, disabled = fa
           </Select>
           {inputDevices.length === 0 && (
             <p className="text-xs text-gray-500">No microphone devices found</p>
+          )}
+          {autoPickMsg && (
+            <p className="text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-md px-2 py-1">
+              {autoPickMsg}
+            </p>
           )}
 
           {/* Audio Level Meters for Input Devices */}

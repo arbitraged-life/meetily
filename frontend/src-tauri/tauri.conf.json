@@ -67,6 +67,11 @@
                         "updater:default",
                         "process:default",
                         "deep-link:default",
+                        "global-shortcut:default",
+                        "global-shortcut:allow-register",
+                        "global-shortcut:allow-unregister",
+                        "global-shortcut:allow-unregister-all",
+                        "global-shortcut:allow-is-registered",
                         {
                             "identifier": "fs:scope",
                             "allow": [
@@ -119,9 +124,9 @@
             }
         },
         "updater": {
-            "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEVDQTYzMUQ3ODc5N0M4MkEKUldRcXlKZUgxekdtN09DRkVWSHNpZlJseEVOUmpNd1dDSTNaLzZ3MXJGTnY3WW1pdnlOYjBpbkIK",
+            "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEVDQzVCNDQ2MkFERDdFN0YKUldSL2Z0MHFSclRGN0tQdGJ0eTdGb3dCaDhwc0V0d0hVMDVCUEZWV1ptUENNMHVFMTVzamRSRkMK",
             "endpoints": [
-                "https://github.com/Zackriya-Solutions/meeting-minutes/releases/latest/download/latest.json"
+                "https://github.com/arbitraged-life/meetily/releases/latest/download/latest.json"
             ]
         }
     }
