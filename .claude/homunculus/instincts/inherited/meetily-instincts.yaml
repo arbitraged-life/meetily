@@ -1,0 +1,413 @@
+# Instincts generated from https://github.com/arbitraged-life/meetily
+# Generated: 2026-06-03T13:30:16.569Z
+# Version: 2.0
+# NOTE: This file supplements (does not replace) any existing curated instincts.
+# High-confidence manually curated instincts should be preserved alongside these.
+
+---
+id: meetily-commit-conventional
+trigger: "when writing a commit message"
+confidence: 0.85
+domain: git
+source: repo-analysis
+source_repo: https://github.com/arbitraged-life/meetily
+---
+
+# Meetily Commit Conventional
+
+## Action
+
+Use conventional commit format with prefixes: ci
+
+## Evidence
+
+- 1 commits analyzed
+- Detected conventional commit pattern
+- Examples: ci: add zero-config security/quality workflows
+
+---
+id: meetily-commit-length
+trigger: "when writing a commit message"
+confidence: 0.6
+domain: git
+source: repo-analysis
+source_repo: https://github.com/arbitraged-life/meetily
+---
+
+# Meetily Commit Length
+
+## Action
+
+Keep commit messages concise (~46 characters)
+
+## Evidence
+
+- Average commit message length: 46 chars
+- Based on 1 commits
+
+---
+id: meetily-naming-files
+trigger: "when creating a new file"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: https://github.com/arbitraged-life/meetily
+---
+
+# Meetily Naming Files
+
+## Action
+
+Use camelCase naming convention
+
+## Evidence
+
+- Analyzed file naming patterns in repository
+- Dominant pattern: camelCase
+
+---
+id: meetily-import-relative
+trigger: "when importing modules"
+confidence: 0.75
+domain: code-style
+source: repo-analysis
+source_repo: https://github.com/arbitraged-life/meetily
+---
+
+# Meetily Import Relative
+
+## Action
+
+Use relative imports for project files
+
+## Evidence
+
+- Import analysis shows relative import pattern
+- Example: import { x } from '../lib/x'
+
+---
+id: meetily-export-style
+trigger: "when exporting from a module"
+confidence: 0.7
+domain: code-style
+source: repo-analysis
+source_repo: https://github.com/arbitraged-life/meetily
+---
+
+# Meetily Export Style
+
+## Action
+
+Prefer named exports
+
+## Evidence
+
+- Export pattern analysis
+- Dominant style: named
+
+---
+id: meetily-test-separate
+trigger: "when writing tests"
+confidence: 0.8
+domain: testing
+source: repo-analysis
+source_repo: https://github.com/arbitraged-life/meetily
+---
+
+# Meetily Test Separate
+
+## Action
+
+Place tests in the tests/ or __tests__/ directory, mirroring src structure
+
+## Evidence
+
+- Separate test directory pattern detected
+- Tests live in dedicated test folders
+
+---
+id: meetily-instinct-file-naming-camelCase
+trigger: "When creating a new TypeScript file"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: arbitraged-life/meetily
+---
+
+# Meetily Instinct File Naming CamelCase
+
+## Action
+
+Name the file using camelCase
+
+## Evidence
+
+- Pattern in namingConventions.files
+
+---
+id: meetily-instinct-function-naming-camelCase
+trigger: "When defining a new function"
+confidence: 0.9
+domain: code-style
+source: repo-analysis
+source_repo: arbitraged-life/meetily
+---
+
+# Meetily Instinct Function Naming CamelCase
+
+## Action
+
+Name the function using camelCase
+
+## Evidence
+
+- Pattern in namingConventions.functions
+
+---
+id: meetily-instinct-class-naming-pascalCase
+trigger: "When declaring a new class"
+confidence: 0.9
+domain: code-style
+source: repo-analysis
+source_repo: arbitraged-life/meetily
+---
+
+# Meetily Instinct Class Naming PascalCase
+
+## Action
+
+Name the class using PascalCase
+
+## Evidence
+
+- Pattern in namingConventions.classes
+
+---
+id: meetily-instinct-constant-naming-screamingSnakeCase
+trigger: "When declaring a constant"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: arbitraged-life/meetily
+---
+
+# Meetily Instinct Constant Naming ScreamingSnakeCase
+
+## Action
+
+Name the constant using SCREAMING_SNAKE_CASE
+
+## Evidence
+
+- Pattern in namingConventions.constants
+
+---
+id: meetily-instinct-import-style-relative
+trigger: "When importing modules in TypeScript files"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: arbitraged-life/meetily
+---
+
+# Meetily Instinct Import Style Relative
+
+## Action
+
+Use relative import paths
+
+## Evidence
+
+- Pattern in importStyle
+
+---
+id: meetily-instinct-export-style-named
+trigger: "When exporting functions, classes, or constants"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: arbitraged-life/meetily
+---
+
+# Meetily Instinct Export Style Named
+
+## Action
+
+Use named exports
+
+## Evidence
+
+- Pattern in exportStyle
+
+---
+id: meetily-instinct-test-location-separate
+trigger: "When adding or organizing tests"
+confidence: 0.7
+domain: testing
+source: repo-analysis
+source_repo: arbitraged-life/meetily
+---
+
+# Meetily Instinct Test Location Separate
+
+## Action
+
+Place test files in a separate directory from source files
+
+## Evidence
+
+- Pattern in architecture.folderStructure.testLocation
+
+---
+id: meetily-instinct-git-commit-conventional-ci
+trigger: "When committing CI-related changes"
+confidence: 0.9
+domain: git
+source: repo-analysis
+source_repo: arbitraged-life/meetily
+---
+
+# Meetily Instinct Git Commit Conventional Ci
+
+## Action
+
+Prefix the commit message with 'ci:' following Conventional Commits
+
+## Evidence
+
+- Seen in commit: 'ci: add zero-config security/quality workflows'
+- Pattern in commits.prefixes
+
+---
+id: meetily-instinct-git-commit-length
+trigger: "When writing a commit message"
+confidence: 0.6
+domain: git
+source: repo-analysis
+source_repo: arbitraged-life/meetily
+---
+
+# Meetily Instinct Git Commit Length
+
+## Action
+
+Keep the commit message concise, around 46 characters on average
+
+## Evidence
+
+- Pattern in commits.averageLength
+
+---
+id: meetily-instinct-workflow-codeql
+trigger: "When configuring security analysis workflows"
+confidence: 0.8
+domain: workflow
+source: repo-analysis
+source_repo: arbitraged-life/meetily
+---
+
+# Meetily Instinct Workflow Codeql
+
+## Action
+
+Include a .github/workflows/codeql.yml file for CodeQL analysis
+
+## Evidence
+
+- Pattern in architecture.configFiles: .github/workflows/codeql.yml
+
+---
+id: meetily-instinct-workflow-dependency-review
+trigger: "When setting up dependency review automation"
+confidence: 0.8
+domain: workflow
+source: repo-analysis
+source_repo: arbitraged-life/meetily
+---
+
+# Meetily Instinct Workflow Dependency Review
+
+## Action
+
+Include a .github/workflows/dependency-review.yml workflow
+
+## Evidence
+
+- Pattern in architecture.configFiles: .github/workflows/dependency-review.yml
+
+---
+id: meetily-instinct-workflow-scorecard
+trigger: "When adding repository health checks"
+confidence: 0.8
+domain: workflow
+source: repo-analysis
+source_repo: arbitraged-life/meetily
+---
+
+# Meetily Instinct Workflow Scorecard
+
+## Action
+
+Include a .github/workflows/scorecard.yml workflow
+
+## Evidence
+
+- Pattern in architecture.configFiles: .github/workflows/scorecard.yml
+
+---
+id: meetily-instinct-workflow-trivy
+trigger: "When configuring container or dependency vulnerability scanning"
+confidence: 0.8
+domain: workflow
+source: repo-analysis
+source_repo: arbitraged-life/meetily
+---
+
+# Meetily Instinct Workflow Trivy
+
+## Action
+
+Include a .github/workflows/trivy.yml workflow
+
+## Evidence
+
+- Pattern in architecture.configFiles: .github/workflows/trivy.yml
+
+---
+id: meetily-instinct-workflow-trufflehog
+trigger: "When setting up secret scanning"
+confidence: 0.8
+domain: workflow
+source: repo-analysis
+source_repo: arbitraged-life/meetily
+---
+
+# Meetily Instinct Workflow Trufflehog
+
+## Action
+
+Include a .github/workflows/trufflehog.yml workflow
+
+## Evidence
+
+- Pattern in architecture.configFiles: .github/workflows/trufflehog.yml
+
+---
+id: meetily-instinct-workflow-typos
+trigger: "When automating typo detection"
+confidence: 0.8
+domain: workflow
+source: repo-analysis
+source_repo: arbitraged-life/meetily
+---
+
+# Meetily Instinct Workflow Typos
+
+## Action
+
+Include a .github/workflows/typos.yml workflow
+
+## Evidence
+
+- Pattern in architecture.configFiles: .github/workflows/typos.yml
+
