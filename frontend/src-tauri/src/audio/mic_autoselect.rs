@@ -146,10 +146,7 @@ fn probe_one(device: &cpal::Device, name: &str) -> MicProbeResult {
     };
 
     if stream.play().is_ok() {
-        let start = Instant::now();
-        while start.elapsed() < Duration::from_millis(PROBE_MS) {
-            std::thread::sleep(Duration::from_millis(20));
-        }
+        std::thread::sleep(Duration::from_millis(PROBE_MS));
     }
     drop(stream);
 

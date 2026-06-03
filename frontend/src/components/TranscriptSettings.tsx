@@ -37,15 +37,16 @@ export function TranscriptSettings({ transcriptModelConfig, setTranscriptModelCo
         setActiveRegistryCheck(provider);
         try {
             const detected = await invoke<boolean>('registry_has_key', { provider });
-            // Only update state if this is still the active provider
-            setActiveRegistryCheck((current) => {
-                if (current === provider) {
+            // Only update state if this provider is still the active check
+            setActiveRegistryCheck((activeProvider) => {
+                if (activeProvider === provider) {
                     setRegistryDetected(detected);
+                    return null;
                 }
-                return current === provider ? null : current;
+                return activeProvider;
             });
         } catch {
-            setActiveRegistryCheck(null);
+            setActiveRegistryCheck((activeProvider) => activeProvider === provider ? null : activeProvider);
         }
     };
 
