@@ -105,10 +105,11 @@ impl SettingsRepository {
         sqlx::query(&query).bind(api_key).execute(pool).await?;
 
         // #885: mirror into the central NERV keychain registry so the key survives
-        // DB resets / re-installs. Best-effort — keychain failure must not break save.
+        // DB resets / re-installs. Warn the user if keychain sync fails.
         if !api_key.is_empty() {
             if let Err(e) = crate::key_registry::set_key(provider, api_key) {
-                log::warn!("key_registry mirror failed for {}: {}", provider, e);
+                log::error!("Failed to sync API key to keychain registry for {}: {}. Key will not survive database resets.", provider, e);
+                // Consider returning this as a warning to the UI
             }
         }
 

@@ -63,11 +63,11 @@ fn save_config<R: Runtime>(app: &AppHandle<R>, cfg: &HotkeyConfig) -> Result<(),
     std::fs::write(&p, bytes).map_err(|e| e.to_string())
 }
 
+static START_TIME: std::sync::OnceLock<std::time::Instant> = std::sync::OnceLock::new();
+
 fn now_ms() -> u64 {
-    std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map(|d| d.as_millis() as u64)
-        .unwrap_or(0)
+    let start = START_TIME.get_or_init(std::time::Instant::now);
+    std::time::Instant::now().duration_since(*start).as_millis() as u64
 }
 
 /// True if enough time has passed since the last fire (debounce). Updates the

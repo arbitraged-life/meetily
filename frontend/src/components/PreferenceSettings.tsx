@@ -98,6 +98,11 @@ export function PreferenceSettings() {
     e.preventDefault();
     e.stopPropagation();
     const key = e.key;
+    if (key === "Escape") {
+      setCapturingHotkey(false);
+      setHotkeyMsg(null);
+      return;
+    }
     // Ignore lone modifier presses — wait for a real key
     if (["Control", "Shift", "Alt", "Meta"].includes(key)) return;
     const parts: string[] = [];

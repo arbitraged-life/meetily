@@ -82,7 +82,12 @@ pub fn set_key(provider: &str, value: &str) -> Result<(), String> {
     }
     let account = canonical(provider);
     let label = format!("NERV key: {}", account);
-    let status = Command::new("security")
+    use std::process::{Command, Stdio};
+    use std::io::Write;
+    let account = canonical(provider);
+    let label = format!("NERV key: {}", account);
+    
+    let mut child = Command::new("security")
         .args([
             "add-generic-password",
             "-U", // update if exists
@@ -93,10 +98,17 @@ pub fn set_key(provider: &str, value: &str) -> Result<(), String> {
             "-l",
             &label,
             "-w",
-            value,
         ])
-        .status()
+        .stdin(Stdio::piped())
+        .spawn()
         .map_err(|e| e.to_string())?;
+        
+    if let Some(mut stdin) = child.stdin.take() {
+        stdin.write_all(value.as_bytes())
+            .map_err(|e| e.to_string())?;
+    }
+    
+    let status = child.wait().map_err(|e| e.to_string())?;
     if status.success() {
         Ok(())
     } else {
@@ -138,12 +150,13 @@ pub fn resolve(provider: &str, existing: Option<String>) -> Option<String> {
 /// Returns which providers have a key in the central registry — drives
 /// zero-typing UI (show "✓ detected" badges, prefill dropdowns).
 #[tauri::command]
-pub fn registry_status() -> RegistryStatus {
-    let providers = KNOWN_PROVIDERS
-        .iter()
-        .filter(|p| has_key(p))
-        .map(|p| p.to_string())
-        .collect();
+pub async fn registry_status() -> RegistryStatus {
+    let mut providers = Vec::new();
+    for &provider in KNOWN_PROVIDERS {
+        if has_key(provider).await {
+            providers.push(provider.to_string());
+        }
+    }
     RegistryStatus { providers }
 }
 
