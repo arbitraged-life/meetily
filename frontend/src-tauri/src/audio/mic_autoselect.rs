@@ -77,7 +77,7 @@ fn probe_one(device: &cpal::Device, name: &str) -> MicProbeResult {
     };
 
     let acc_cb = acc.clone();
-    let feed = move |data: &[f32]| {
+    let feed_f32 = move |data: &[f32]| {
         if let Ok(mut a) = acc_cb.lock() {
             a.frames += 1;
             for &s in data {
@@ -95,29 +95,49 @@ fn probe_one(device: &cpal::Device, name: &str) -> MicProbeResult {
     let stream = match sample_format {
         SampleFormat::F32 => device.build_input_stream(
             &stream_config,
-            move |data: &[f32], _: &_| feed(data),
+            move |data: &[f32], _: &_| feed_f32(data),
             err_fn,
             None,
         ),
         SampleFormat::I16 => {
-            let feed = feed.clone();
+            let acc_cb = acc.clone();
             device.build_input_stream(
                 &stream_config,
                 move |data: &[i16], _: &_| {
-                    let f: Vec<f32> = data.iter().map(|&s| s.to_sample()).collect();
-                    feed(&f);
+                    if let Ok(mut a) = acc_cb.lock() {
+                        a.frames += 1;
+                        for &s in data {
+                            let f: f32 = s.to_sample();
+                            let v = f.abs();
+                            a.sum_sq += (f as f64) * (f as f64);
+                            a.samples += 1;
+                            if v > a.peak {
+                                a.peak = v;
+                            }
+                        }
+                    }
                 },
                 err_fn,
                 None,
             )
         }
         SampleFormat::U16 => {
-            let feed = feed.clone();
+            let acc_cb = acc.clone();
             device.build_input_stream(
                 &stream_config,
                 move |data: &[u16], _: &_| {
-                    let f: Vec<f32> = data.iter().map(|&s| s.to_sample()).collect();
-                    feed(&f);
+                    if let Ok(mut a) = acc_cb.lock() {
+                        a.frames += 1;
+                        for &s in data {
+                            let f: f32 = s.to_sample();
+                            let v = f.abs();
+                            a.sum_sq += (f as f64) * (f as f64);
+                            a.samples += 1;
+                            if v > a.peak {
+                                a.peak = v;
+                            }
+                        }
+                    }
                 },
                 err_fn,
                 None,
