@@ -79,6 +79,7 @@ impl SettingsRepository {
             ));
         }
 
+        // Validate provider to prevent SQL injection
         let api_key_column = match provider {
             "openai" => "openaiApiKey",
             "claude" => "anthropicApiKey",
@@ -93,16 +94,28 @@ impl SettingsRepository {
             }
         };
 
-        let query = format!(
+        // Use parameterized query with validated column name
+        sqlx::query(
             r#"
-            INSERT INTO settings (id, provider, model, whisperModel, "{}")
-            VALUES ('1', 'openai', 'gpt-4o-2024-11-20', 'large-v3', $1)
+            INSERT INTO settings (id, provider, model, whisperModel, openaiApiKey, anthropicApiKey, ollamaApiKey, groqApiKey, openRouterApiKey)
+            VALUES ('1', 'openai', 'gpt-4o-2024-11-20', 'large-v3',
+                    CASE WHEN $2 = 'openai' THEN $1 ELSE NULL END,
+                    CASE WHEN $2 = 'claude' THEN $1 ELSE NULL END,
+                    CASE WHEN $2 = 'ollama' THEN $1 ELSE NULL END,
+                    CASE WHEN $2 = 'groq' THEN $1 ELSE NULL END,
+                    CASE WHEN $2 = 'openrouter' THEN $1 ELSE NULL END)
             ON CONFLICT(id) DO UPDATE SET
-                "{}" = $1
+                openaiApiKey = CASE WHEN $2 = 'openai' THEN $1 ELSE openaiApiKey END,
+                anthropicApiKey = CASE WHEN $2 = 'claude' THEN $1 ELSE anthropicApiKey END,
+                ollamaApiKey = CASE WHEN $2 = 'ollama' THEN $1 ELSE ollamaApiKey END,
+                groqApiKey = CASE WHEN $2 = 'groq' THEN $1 ELSE groqApiKey END,
+                openRouterApiKey = CASE WHEN $2 = 'openrouter' THEN $1 ELSE openRouterApiKey END
             "#,
-            api_key_column, api_key_column
-        );
-        sqlx::query(&query).bind(api_key).execute(pool).await?;
+        )
+        .bind(api_key)
+        .bind(provider)
+        .execute(pool)
+        .await?;
 
         Ok(())
     }
@@ -115,6 +128,7 @@ impl SettingsRepository {
         if provider == "custom-openai" {
             let config = Self::get_custom_openai_config(pool).await?;
             return Ok(config.and_then(|c| c.api_key));
+        // Validate provider to prevent SQL injection
         }
 
         let api_key_column = match provider {
@@ -194,16 +208,37 @@ impl SettingsRepository {
                     format!("Invalid provider: {}", provider).into(),
                 ))
             }
-        };
+        // Use parameterized query with validated column name
+        sqlx::query(
 
-        let query = format!(
-            r#"
+            INSERT INTO transcript_settings (id, provider, model, whisperApiKey, deepgramApiKey, elevenLabsApiKey, groqApiKey, openaiApiKey, assemblyaiApiKey, geminiApiKey, cartesiaApiKey, speechmaticsApiKey)
+            VALUES ('1', 'parakeet', $2,
+                    CASE WHEN $3 = 'localWhisper' THEN $1 ELSE NULL END,
+                    CASE WHEN $3 = 'deepgram' THEN $1 ELSE NULL END,
+                    CASE WHEN $3 = 'elevenLabs' THEN $1 ELSE NULL END,
+                    CASE WHEN $3 = 'groq' THEN $1 ELSE NULL END,
+                    CASE WHEN $3 = 'openai' THEN $1 ELSE NULL END,
+                    CASE WHEN $3 = 'assemblyai' THEN $1 ELSE NULL END,
+                    CASE WHEN $3 = 'gemini' THEN $1 ELSE NULL END,
+                    CASE WHEN $3 = 'cartesia' THEN $1 ELSE NULL END,
+                    CASE WHEN $3 = 'speechmatics' THEN $1 ELSE NULL END)
             INSERT INTO transcript_settings (id, provider, model, "{}")
-            VALUES ('1', 'parakeet', '{}', $1)
+                whisperApiKey = CASE WHEN $3 = 'localWhisper' THEN $1 ELSE whisperApiKey END,
+                deepgramApiKey = CASE WHEN $3 = 'deepgram' THEN $1 ELSE deepgramApiKey END,
+                elevenLabsApiKey = CASE WHEN $3 = 'elevenLabs' THEN $1 ELSE elevenLabsApiKey END,
+                groqApiKey = CASE WHEN $3 = 'groq' THEN $1 ELSE groqApiKey END,
+                openaiApiKey = CASE WHEN $3 = 'openai' THEN $1 ELSE openaiApiKey END,
+                assemblyaiApiKey = CASE WHEN $3 = 'assemblyai' THEN $1 ELSE assemblyaiApiKey END,
+                geminiApiKey = CASE WHEN $3 = 'gemini' THEN $1 ELSE geminiApiKey END,
+                cartesiaApiKey = CASE WHEN $3 = 'cartesia' THEN $1 ELSE cartesiaApiKey END,
+                speechmaticsApiKey = CASE WHEN $3 = 'speechmatics' THEN $1 ELSE speechmaticsApiKey END
             ON CONFLICT(id) DO UPDATE SET
-                "{}" = $1
-            "#,
-            api_key_column, crate::config::DEFAULT_PARAKEET_MODEL, api_key_column
+        )
+        .bind(api_key)
+        .bind(crate::config::DEFAULT_PARAKEET_MODEL)
+        .bind(provider)
+        .execute(pool)
+        .await?;
         );
         sqlx::query(&query).bind(api_key).execute(pool).await?;
 
@@ -251,6 +286,7 @@ impl SettingsRepository {
                 .execute(pool)
                 .await?;
             return Ok(());
+        // Validate provider to prevent SQL injection
         }
 
         let api_key_column = match provider {

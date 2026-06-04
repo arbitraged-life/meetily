@@ -89,8 +89,7 @@ export function TranscriptSettings({ transcriptModelConfig, setTranscriptModelCo
                 apiKey: trimmed,
             });
             // Keep the in-memory config in sync so other components see the key.
-            setTranscriptModelConfig((prev) => ({ ...prev, apiKey: trimmed }));
-            setSavedApiKey(trimmed);
+            setTranscriptModelConfig({ provider: uiProvider, model: transcriptModelConfig.model, apiKey: trimmed });
             setSaveState('saved');
             setIsApiKeyLocked(true);
             // Re-arm the "saved" badge after a moment.
@@ -147,11 +146,8 @@ export function TranscriptSettings({ transcriptModelConfig, setTranscriptModelCo
     };
 
     const handleWhisperModelSelect = (modelName: string) => {
-        // Always update config when model is selected, regardless of current provider
-        // This ensures the model is set when user switches back
         setTranscriptModelConfig({
-            ...transcriptModelConfig,
-            provider: 'localWhisper', // Ensure provider is set correctly
+            provider: 'localWhisper',
             model: modelName
         });
         // Close modal after selection
@@ -162,11 +158,8 @@ export function TranscriptSettings({ transcriptModelConfig, setTranscriptModelCo
 
     const handleParakeetModelSelect = (modelName: string) => {
         // Always update config when model is selected, regardless of current provider
-        // This ensures the model is set when user switches back
         setTranscriptModelConfig({
-            ...transcriptModelConfig,
-            provider: 'parakeet', // Ensure provider is set correctly
-            model: modelName
+            provider: 'parakeet',
         });
         // Close modal after selection
         if (onModelSelect) {
@@ -218,7 +211,7 @@ export function TranscriptSettings({ transcriptModelConfig, setTranscriptModelCo
                                     value={transcriptModelConfig.model}
                                     onValueChange={(value) => {
                                         const model = value as TranscriptModelProps['model'];
-                                        setTranscriptModelConfig({ ...transcriptModelConfig, provider: uiProvider, model });
+                                        setTranscriptModelConfig({ provider: uiProvider, model, apiKey: transcriptModelConfig.apiKey });
                                     }}
                                 >
                                     <SelectTrigger className='focus:ring-1 focus:ring-blue-500 focus:border-blue-500'>

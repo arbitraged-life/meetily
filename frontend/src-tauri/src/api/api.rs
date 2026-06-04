@@ -723,6 +723,11 @@ pub async fn api_test_transcript_api_key<R: Runtime>(
     provider: String,
     api_key: String,
     _auth_token: Option<String>,
+    // Validate provider input
+    if provider.trim().is_empty() {
+        return Err("Provider cannot be empty".to_string());
+    }
+
 ) -> Result<serde_json::Value, String> {
     log_info!(
         "api_test_transcript_api_key called (native) for provider '{}'",
