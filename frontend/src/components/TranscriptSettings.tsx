@@ -54,6 +54,8 @@ export function TranscriptSettings({ transcriptModelConfig, setTranscriptModelCo
             setApiKey(null);
             setSavedApiKey(null);
 
+            setApiKey('');
+            setSavedApiKey('');
             const data = await invoke('api_get_transcript_api_key', { provider }) as string;
 
             setApiKey(data || '');
@@ -87,7 +89,7 @@ export function TranscriptSettings({ transcriptModelConfig, setTranscriptModelCo
                 apiKey: trimmed,
             });
             // Keep the in-memory config in sync so other components see the key.
-            setTranscriptModelConfig({ ...transcriptModelConfig, apiKey: trimmed });
+            setTranscriptModelConfig((prev) => ({ ...prev, apiKey: trimmed }));
             setSavedApiKey(trimmed);
             setSaveState('saved');
             setIsApiKeyLocked(true);
@@ -344,7 +346,7 @@ export function TranscriptSettings({ transcriptModelConfig, setTranscriptModelCo
                                 </Button>
 
                                 {/* Unsaved-changes hint */}
-                                {!isApiKeyLocked && (apiKey || '') !== (savedApiKey || '') && saveState === 'idle' && (
+                                {!isApiKeyLocked && (apiKey || '').trim() !== (savedApiKey || '').trim() && saveState === 'idle' && (
                                     <span className="text-xs text-amber-600">Unsaved changes</span>
                                 )}
                             </div>
