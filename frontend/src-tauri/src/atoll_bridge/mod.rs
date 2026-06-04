@@ -95,12 +95,19 @@ async fn rpc_call(method: &str, params: Value) -> Result<Value, String> {
 
 /// Ensure Atoll has authorized this bundle (idempotent, persists server-side).
 async fn ensure_authorized() -> Result<(), String> {
+    static AUTHORIZED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+    if AUTHORIZED.load(std::sync::atomic::Ordering::Relaxed) {
+        return Ok(());
+    }
     rpc_call(
         "atoll.requestAuthorization",
         json!({ "bundleIdentifier": BUNDLE_ID }),
     )
     .await
-    .map(|_| ())
+    .map(|_| {
+        AUTHORIZED.store(true, std::sync::atomic::Ordering::Relaxed);
+        ()
+    })
 }
 
 /// Build a minimal-but-valid AtollNotchExperienceDescriptor for a meeting,
@@ -138,7 +145,8 @@ pub async fn present_meeting(title: &str, subtitle: &str, _style: &str) {
 
 /// Update an active meeting experience in the notch
 pub async fn update_meeting(title: &str, subtitle: &str) {
-    if ensure_authorized().await.is_err() {
+    if let Err(e) = ensure_authorized().await {
+        debug!("Atoll bridge: auth failed: {} (Atoll may not be running)", e);
         return;
     }
     let descriptor = meeting_descriptor(&format!("🔴 {}", title), subtitle);

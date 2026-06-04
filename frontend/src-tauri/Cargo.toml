@@ -166,6 +166,7 @@ tauri-plugin-deep-link = "2"
 tauri-plugin-notification = "2.3.1"
 tauri-plugin-updater = "2"
 tauri-plugin-process = "2.3.0"
+tauri-plugin-global-shortcut = "2"
 
 # macOS-specific dependencies with Metal GPU acceleration
 [target.'cfg(target_os = "macos")'.dependencies]
@@ -236,16 +237,3 @@ memory-stats = "1.0"
 strsim = "0.10.0"
 futures = "0.3.31"
 tracing-subscriber = "0.3.16"
-
-# NOTE: Cargo only applies [patch] from the WORKSPACE ROOT manifest
-# (../../Cargo.toml). Because these live in this member crate, Cargo IGNORES
-# them and prints `warning: patch for the non root package will be ignored`
-# on every build. They are therefore currently inert on ALL platforms,
-# including the Windows MSVC esaxx-rs case they were meant to fix.
-# TODO: if the esaxx-rs/cpal patches are actually required for the Windows
-# build, relocate this [patch.crates-io] block to the workspace-root Cargo.toml
-# (and verify offline macOS/Linux builds still resolve, since the git sources
-# fail to fetch in credential-less CI/sandbox environments).
-[patch.crates-io]
-cpal = { git = "https://github.com/RustAudio/cpal", rev = "51c3b43" }
-esaxx-rs = { git = "https://github.com/thewh1teagle/esaxx-rs.git", branch = "feat/dynamic-msvc-link" }

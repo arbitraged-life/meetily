@@ -117,6 +117,15 @@ impl SettingsRepository {
         .execute(pool)
         .await?;
 
+        // #885: mirror into the central NERV keychain registry so the key survives
+        // DB resets / re-installs. Warn the user if keychain sync fails.
+        if !api_key.is_empty() {
+            if let Err(e) = crate::key_registry::set_key(provider, api_key) {
+                log::error!("Failed to sync API key to keychain registry for {}: {}. Key will not survive database resets.", provider, e);
+                // Consider returning this as a warning to the UI
+            }
+        }
+
         Ok(())
     }
 
@@ -149,7 +158,10 @@ impl SettingsRepository {
             "SELECT {} FROM settings WHERE id = '1' LIMIT 1",
             api_key_column
         );
-        let api_key = sqlx::query_scalar(&query).fetch_optional(pool).await?;
+        let api_key: Option<String> = sqlx::query_scalar(&query).fetch_optional(pool).await?;
+        // Fallback to the central NERV key registry (shared macOS Keychain) so
+        // the user never has to retype a key already configured in another app.
+        let api_key = crate::key_registry::resolve(provider, api_key);
         Ok(api_key)
     }
 
@@ -242,6 +254,13 @@ impl SettingsRepository {
         );
         sqlx::query(&query).bind(api_key).execute(pool).await?;
 
+        // #885: mirror into the central NERV keychain registry (best-effort).
+        if !api_key.is_empty() {
+            if let Err(e) = crate::key_registry::set_key(provider, api_key) {
+                log::warn!("key_registry mirror failed for {}: {}", provider, e);
+            }
+        }
+
         Ok(())
     }
 
@@ -272,7 +291,10 @@ impl SettingsRepository {
             "SELECT {} FROM transcript_settings WHERE id = '1' LIMIT 1",
             api_key_column
         );
-        let api_key = sqlx::query_scalar(&query).fetch_optional(pool).await?;
+        let api_key: Option<String> = sqlx::query_scalar(&query).fetch_optional(pool).await?;
+        // Central NERV registry fallback (shared Keychain) — auto-detect keys
+        // configured in other apps (VoiceInk/MacWhisper) without retyping.
+        let api_key = crate::key_registry::resolve(provider, api_key);
         Ok(api_key)
     }
 

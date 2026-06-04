@@ -59,7 +59,9 @@ fn handle_menu_event<R: Runtime>(app: &AppHandle<R>, item_id: &str) {
         _ => {}
     }
 }
-fn toggle_recording_handler<R: Runtime>(app: &AppHandle<R>) {
+/// Toggle recording from outside the tray (e.g. a global hotkey). Public so
+/// the hotkey module can reuse the exact same start/stop path as the tray menu.
+pub fn toggle_recording_handler<R: Runtime>(app: &AppHandle<R>) {
     focus_main_window(app);
     let app_clone = app.clone();
     tauri::async_runtime::spawn(async move {

@@ -22,4 +22,12 @@ tokio = { version = "1.32.0", features = ["full"] }
 [profile.release]
 codegen-units = 1
 lto = true
+
+# Cargo only applies [patch] from the WORKSPACE ROOT manifest. These patches
+# target Windows-only build fixes (esaxx-rs MSVC dynamic-link branch) and a
+# specific cpal git rev. Moving them here from the member crate ensures they
+# actually take effect (members' [patch] sections are silently ignored).
+[patch.crates-io]
+cpal = { git = "https://github.com/RustAudio/cpal", rev = "51c3b43" }
+esaxx-rs = { git = "https://github.com/thewh1teagle/esaxx-rs.git", branch = "feat/dynamic-msvc-link" }
 opt-level = 3  # Optimize for runtime performance

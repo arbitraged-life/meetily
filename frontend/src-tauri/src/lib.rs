@@ -64,6 +64,9 @@ pub mod tray;
 pub mod distributed_notifications;
 pub mod utils;
 pub mod whisper_engine;
+pub mod key_registry;
+pub mod hotkey;
+pub mod appearance;
 pub mod meeting_domain;
 pub mod feature_flags;
 
@@ -606,6 +609,7 @@ pub fn run() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_deep_link::init())
+        .plugin(hotkey::plugin())
         .manage(whisper_engine::parallel_commands::ParallelProcessorState::new())
         .manage(Arc::new(RwLock::new(
             None::<notifications::manager::NotificationManager<tauri::Wry>>,
@@ -625,6 +629,14 @@ pub fn run() {
         .setup(|_app| {
             log::info!("Application setup complete");
 
+            // Global hotkey for start/stop recording (default Cmd+Shift+R).
+            hotkey::init(&_app.handle());
+
+            // Menu-bar-only / hide-Dock mode (#428) — apply persisted preference.
+            appearance::init(&_app.handle());
+
+            // Atoll notch bridge — push meeting state to macOS notch
+            atoll_bridge::setup_atoll_listener(&_app.handle());
             // Initialize feature flags FIRST — everything else gates on these
             feature_flags::system_mute::ensure_unmuted_on_startup();
             let ff_state = _app.state::<feature_flags::FeatureFlagState>().inner();
@@ -790,6 +802,15 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             start_recording,
+            key_registry::registry_status,
+            key_registry::registry_has_key,
+            key_registry::registry_get_key,
+            key_registry::registry_set_key,
+            hotkey::get_recording_hotkey,
+            hotkey::set_recording_hotkey,
+            appearance::get_dock_visibility,
+            appearance::set_dock_visibility,
+            audio::mic_autoselect::auto_select_microphone,
             stop_recording,
             is_recording,
             get_transcription_status,
