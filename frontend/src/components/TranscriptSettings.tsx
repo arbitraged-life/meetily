@@ -192,6 +192,7 @@ export function TranscriptSettings({ transcriptModelConfig, setTranscriptModelCo
         // Always update config when model is selected, regardless of current provider
         setTranscriptModelConfig({
             provider: 'parakeet',
+            model: modelName
         });
         // Close modal after selection
         if (onModelSelect) {

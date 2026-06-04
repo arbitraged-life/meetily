@@ -201,7 +201,7 @@ impl SettingsRepository {
     pub async fn save_transcript_api_key(
         pool: &SqlitePool,
         provider: &str,
-        api_key: &str,
+        // Validate provider to prevent SQL injection
         // Validate provider to prevent SQL injection
     ) -> std::result::Result<(), sqlx::Error> {
         let api_key_column = match provider {
@@ -219,13 +219,14 @@ impl SettingsRepository {
             _ => {
                 return Err(sqlx::Error::Protocol(
                     format!("Invalid provider: {}", provider).into(),
+            }
                 ))
         };
 
+        sqlx::query(
         // Use parameterized query with validated column name
-        // Use parameterized query with validated column name
-            r#"
             INSERT INTO transcript_settings (id, provider, model, whisperApiKey, deepgramApiKey, elevenLabsApiKey, groqApiKey, openaiApiKey, assemblyaiApiKey, geminiApiKey, cartesiaApiKey, speechmaticsApiKey)
+            VALUES ('1', 'parakeet', $2,
             VALUES ('1', 'parakeet', $2,
                     CASE WHEN $3 = 'localWhisper' THEN $1 ELSE NULL END,
                     CASE WHEN $3 = 'deepgram' THEN $1 ELSE NULL END,
@@ -235,7 +236,7 @@ impl SettingsRepository {
                     CASE WHEN $3 = 'assemblyai' THEN $1 ELSE NULL END,
                     CASE WHEN $3 = 'gemini' THEN $1 ELSE NULL END,
                     CASE WHEN $3 = 'cartesia' THEN $1 ELSE NULL END,
-                    CASE WHEN $3 = 'speechmatics' THEN $1 ELSE NULL END)
+            ON CONFLICT(id) DO UPDATE SET
                 speechmaticsApiKey = CASE WHEN $3 = 'speechmatics' THEN $1 ELSE speechmaticsApiKey END
                 whisperApiKey = CASE WHEN $3 = 'localWhisper' THEN $1 ELSE whisperApiKey END,
                 deepgramApiKey = CASE WHEN $3 = 'deepgram' THEN $1 ELSE deepgramApiKey END,
@@ -248,11 +249,10 @@ impl SettingsRepository {
                 speechmaticsApiKey = CASE WHEN $3 = 'speechmatics' THEN $1 ELSE speechmaticsApiKey END
             "#,
         )
-        )
         .bind(api_key)
         .bind(crate::config::DEFAULT_PARAKEET_MODEL)
         .bind(provider)
-        .execute(pool)
+        .await?;
         sqlx::query(&query).bind(api_key).execute(pool).await?;
 
         // #885: mirror into the central NERV keychain registry (best-effort).
