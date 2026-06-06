@@ -14,5 +14,5 @@ permissions:
 
 jobs:
   sync:
-    uses: NERV-es/.github/.github/workflows/upstream-sync-reusable.yml@1eda4c5d32e399149d6df22c3dd8e65c5e09d342
+    uses: NERV-es/.github/.github/workflows/upstream-sync-reusable.yml@72a0a18d401c4adda89f9ce2148c8971e4e8366e
     secrets: inherit
