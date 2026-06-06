@@ -1,0 +1,18 @@
+# Org-standard maintenance workflow — thin caller for the shared reusable in
+# NERV-es/.github. Byte-identical across every NERV-es fork. Triggers live
+# here; logic lives in the SHA-pinned reusable. Do not edit logic here.
+name: Sync Fork With Upstream
+
+on:
+  schedule:
+    - cron: '17 6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  sync:
+    uses: NERV-es/.github/.github/workflows/upstream-sync-reusable.yml@1eda4c5d32e399149d6df22c3dd8e65c5e09d342
+    secrets: inherit
