@@ -7,7 +7,6 @@ use std::sync::Arc;
 use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
 use anyhow::{Context, Result};
-use encoding_rs;
 use llama_cpp_2::context::params::LlamaContextParams;
 use llama_cpp_2::llama_backend::LlamaBackend;
 use llama_cpp_2::llama_batch::LlamaBatch;
@@ -70,8 +69,7 @@ fn detect_vram_gb() -> f32 {
         }
     }
 
-    /// TODO: Vulkan VRAM detection
-
+    // TODO: Vulkan VRAM detection
     eprintln!("VRAM detection not available, using conservative estimate");
     4.0 // Conservative fallback
 }

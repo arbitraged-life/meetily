@@ -1,34 +1,15 @@
 // MCP JSON-RPC protocol implementation
 
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use serde_json::{json, Value};
 use crate::tools;
 use crate::resources;
 
 #[derive(Debug, Deserialize)]
 struct JsonRpcRequest {
-    jsonrpc: String,
     id: Option<Value>,
     method: String,
     params: Option<Value>,
-}
-
-pub fn server_info() -> String {
-    json!({
-        "jsonrpc": "2.0",
-        "result": {
-            "protocolVersion": "2024-11-05",
-            "serverInfo": {
-                "name": "meetily-mcp",
-                "version": "0.1.0"
-            },
-            "capabilities": {
-                "tools": { "listChanged": false },
-                "resources": { "listChanged": false }
-            }
-        }
-    })
-    .to_string()
 }
 
 pub fn handle_request(line: &str) -> anyhow::Result<String> {

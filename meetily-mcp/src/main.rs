@@ -23,9 +23,6 @@ fn main() -> Result<()> {
     let stdout = io::stdout();
     let mut stdout_lock = stdout.lock();
 
-    // Send server capabilities on init
-    let server_info = protocol::server_info();
-
     for line in stdin.lock().lines() {
         let line = line?;
         if line.trim().is_empty() {
