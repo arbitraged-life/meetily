@@ -19,7 +19,7 @@ permissions:
 
 jobs:
   quality:
-    uses: NERV-es/NERV/.github/workflows/lint-reusable.yml@ci-quality-v1
+    uses: NERV-es/NERV/.github/workflows/lint-reusable.yml@4d90a48b4ea8370863b30ecd0088a44520dcd6e4 # ci-quality-v1
     # with:
     #   strict: true        # hard-fail on any lint finding
     #   swift_strict: true  # SwiftLint --strict (any warning fails)
