@@ -1,7 +1,7 @@
 # Multi-stage build for Whisper Server (macOS Apple Silicon optimized)
 # This version provides CPU-only compatibility for Apple Silicon Macs
 
-FROM ubuntu:22.04 AS builder
+FROM ubuntu:24.04 AS builder
 
 # Set build arguments
 ARG WHISPER_VERSION=master
@@ -43,7 +43,7 @@ RUN cmake -B build \
 RUN cmake --build build --config Release --target whisper-server -j$(nproc)
 
 # Runtime stage - minimal image
-FROM ubuntu:22.04 AS runtime
+FROM ubuntu:24.04 AS runtime
 
 # Install runtime dependencies
 RUN apt-get update && apt-get install -y \
